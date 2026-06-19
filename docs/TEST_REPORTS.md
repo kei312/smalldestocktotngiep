@@ -26,6 +26,18 @@
 - Thời gian: 2026-06-19 16:04
 - Trạng thái: ✅ PASS
 
+### [1.3.6] & [1.3.7] — Ingestion E2E Test
+- Lệnh:      `python -m ingestion.fetch_prices ...` & `SELECT COUNT(*) ...`
+- Kết quả:   Upserted 40 rows (VCB=8, VNM=8, FPT=8).
+- Thời gian: 2026-06-19 16:50
+- Trạng thái: 🔧 FAIL → FIXED (lần 2 pass)
+
+### [1.3.10] — Pytest Ingestion Layer
+- Lệnh:      `pytest tests/test_ingestion.py -v`
+- Kết quả:   `4 passed in 0.51s`
+- Thời gian: 2026-06-19 16:51
+- Trạng thái: ✅ PASS
+
 ## Ngày 2 — Backfill + Silver + Gold Indicators
 
 _(chưa có entry)_
@@ -54,4 +66,8 @@ _(chưa có entry)_
 - Kết quả sau fix: ✅ PASS / ❌ vẫn FAIL → đã dừng, báo user
 ```
 
-_(chưa có entry)_
+### [1.3.6] — Fail attempt
+- Lỗi gốc:        `psycopg2.ProgrammingError: can't adapt type 'numpy.int64'`
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Đăng ký `register_adapter(np.int64, AsIs)` vào `db.py`
+- Kết quả sau fix: 🔧 FAIL → FIXED (đã upsert thành công 40 rows)
