@@ -40,7 +40,11 @@
 
 ## Ngày 2 — Backfill + Silver + Gold Indicators
 
-_(chưa có entry)_
+### [2.2.8 & 2.2.9] — dbt run & test Silver Layer
+- Lệnh:      `dbt run --select silver` & `dbt test --select silver`
+- Kết quả:   `Done. PASS=6 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=6`
+- Thời gian: 2026-06-19 17:14
+- Trạng thái: ✅ PASS
 
 ## Ngày 3 — Airflow + Power BI
 
@@ -71,3 +75,9 @@ _(chưa có entry)_
 - Gotcha tra cứu:  không khớp gotcha nào
 - Hành động fix:   Đăng ký `register_adapter(np.int64, AsIs)` vào `db.py`
 - Kết quả sau fix: 🔧 FAIL → FIXED (đã upsert thành công 40 rows)
+
+### [2.2.8] — Fail attempt
+- Lỗi gốc:        `could not translate host name "db" to address: Temporary failure in name resolution`
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Đổi `DB_HOST=localhost` trong `.env` và gán `DB_HOST: db` trong `docker-compose.yml` cho Airflow container.
+- Kết quả sau fix: 🔧 FAIL → FIXED (chạy thành công `dbt run` và `dbt test`)

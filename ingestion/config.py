@@ -1,5 +1,8 @@
 import os
 from typing import List
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Single source of truth for reading environment variables
 DB_HOST = os.getenv("DB_HOST", "localhost")

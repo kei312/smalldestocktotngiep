@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: silver_prices
+    description: "Cleaned stock prices data"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - symbol
+            - trade_date
+    columns:
+      - name: symbol
+        description: "Stock ticker symbol"
+        tests:
+          - not_null
+      - name: trade_date
+        description: "Date of trading"
+        tests:
+          - not_null
+      - name: close_price
+        description: "Closing price"
+      - name: is_valid
+        description: "Boolean indicating if the row passed all DQ checks"
+
+  - name: silver_index
+    description: "Cleaned market index data"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - index_code
+            - trade_date
+    columns:
+      - name: index_code
+        tests:
+          - not_null
+      - name: trade_date
+        tests:
+          - not_null

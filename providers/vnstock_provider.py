@@ -6,10 +6,15 @@ so this provider does NOT need to implement multi-source logic.
 """
 
 import logging
+import time
 from datetime import date
 from typing import List
 
 import pandas as pd
+
+# vnstock Guest limit: 20 req/min → 1 req per 3s minimum.
+# We use 3.1s to have a small buffer (≈19.4 req/min effective rate).
+_REQUEST_INTERVAL_SECONDS = 3.1
 
 from .base import (
     DataProvider,
@@ -111,6 +116,11 @@ class VnstockProvider(DataProvider):
                 end=end.strftime("%Y-%m-%d"),
                 interval="1D",
             )
+
+            # Proactive rate-limit guard: sleep AFTER every API call so we
+            # never exceed 20 req/min regardless of how many symbols are batched.
+            time.sleep(_REQUEST_INTERVAL_SECONDS)
+
             if df is None or df.empty:
                 logger.info("Empty response for %s (%s → %s)", symbol, start, end)
                 return pd.DataFrame()
@@ -123,6 +133,17 @@ class VnstockProvider(DataProvider):
         except ProviderError:
             # Already mapped — re-raise as-is
             raise
+        except SystemExit as e:
+            # Safety net: vnstock calls sys.exit() on rate-limit instead of
+            # raising a normal exception.  The proactive sleep above should
+            # prevent this, but if it still fires we wait for the full 1-min
+            # window to reset before re-raising for @retry to handle.
+            logger.warning(
+                "Rate limit still hit for %s despite proactive sleep — "
+                "sleeping 62s for rate-limit window to reset", symbol
+            )
+            time.sleep(62)
+            raise ProviderRateLimitError(f"vnstock rate limit (sys.exit) for {symbol}") from e
         except ConnectionError as e:
             logger.error("Timeout / connection error for %s: %s", symbol, str(e))
             raise ProviderTimeoutError(str(e)) from e
