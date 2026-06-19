@@ -24,3 +24,18 @@ models:
             expression: "bb_upper >= bb_lower"
           config:
             where: "bb_upper IS NOT NULL AND bb_lower IS NOT NULL"
+
+  - name: fact_market_summary
+    description: "Daily market summary showing gainers, losers, and index performance."
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "gainers + losers + unchanged = total_symbols"
+
+  - name: dim_stock
+    description: "Dimension table for distinct symbols."
+    columns:
+      - name: symbol
+        tests:
+          - unique
+          - not_null

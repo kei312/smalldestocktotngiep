@@ -135,8 +135,8 @@
 | 2.3.6 | [x] `dbt/models/gold/schema.yml` — Gold tests | 🟢 Pro High | `dbt/models/gold/schema.yml` | RSI range [0,100], BB upper>=lower, MA20 null-or-positive |
 | 2.3.7 | [x] `dbt test --select gold` | ⚪ Flash | Terminal | G-01 (RSI), G-02 (MA20 warm-up) pass. Ghi vào `docs/TEST_REPORTS.md` |
 | 2.3.8 | [x] Test G-03: MACD so tính tay 3 mã | 🔴 **Opus** | `scripts/verify_macd_g03.py` | Sai số < 0.5% (thật, không nới lỏng — vì SQL nay đã dùng EMA9 chuẩn khớp đúng Python reference). Ghi kết quả vào `docs/TEST_REPORTS.md` |
-| 2.3.9 | [ ] **Commit:** `feat: Gold indicators (MA/RSI/MACD-EMA9/Bollinger)` | ⚪ Flash | git | — |
-| 2.3.10 | [ ] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | — |
+| 2.3.9 | [x] **Commit:** `feat: Gold indicators (MA/RSI/MACD-EMA9/Bollinger)` | ⚪ Flash | git | — |
+| 2.3.10 | [x] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | — |
 
 > **⏸ Gate ngày 2:** `dbt run && dbt test` pass Silver + Gold (kể cả 5 intermediate models). Indicators tính đúng. G-03 < 0.5% thật.
 
