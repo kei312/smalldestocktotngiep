@@ -20,7 +20,11 @@
 
 ## Ngày 1 — Foundation + Provider + Bronze
 
-_(chưa có entry)_
+### [1.2.9] — Pytest Provider Layer
+- Lệnh:      `pytest tests/test_providers.py -v`
+- Kết quả:   `5 passed in 6.65s`
+- Thời gian: 2026-06-19 16:04
+- Trạng thái: ✅ PASS
 
 ## Ngày 2 — Backfill + Silver + Gold Indicators
 
