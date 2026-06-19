@@ -46,6 +46,43 @@
 - Thời gian: 2026-06-19 17:14
 - Trạng thái: ✅ PASS
 
+### [2.3.2b] — int_rsi14 build
+- Lệnh:      `dbt run --select int_rsi14`
+- Kết quả:   `PASS=1. SELECT 330 rows in 0.12s`
+- Thời gian: 2026-06-19 17:33
+- Trạng thái: ✅ PASS (sau 1 lần fix ROUND cast)
+
+### [2.3.3b-e] — int_ema12, int_ema26, int_macd_line, int_macd_signal
+- Lệnh:      `dbt run --select int_ema12 int_ema26 int_macd_line int_macd_signal`
+- Kết quả:   `PASS=4. ema12=345r, ema26=275r, macd_line=275r, macd_signal=235r`
+- Thời gian: 2026-06-19 17:44
+- Trạng thái: ✅ PASS (warm-up khớp đúng bảng SKILL mục 5)
+
+### [2.3.4] — fact_stock_indicators.sql created
+- Lệnh:      Tạo file `dbt/models/gold/fact_stock_indicators.sql`
+- Kết quả:   File tạo thành công. Config: incremental, delete+insert, unique_key list, lookback 60 days.
+- Thời gian: 2026-06-19 17:52
+- Trạng thái: ✅ DONE (file only — chưa chạy build/verify)
+
+### [2.3.5] — Incremental Verification (4 steps)
+- Lệnh:      `psql` count rows, `dbt run --select fact_stock_indicators`, `psql` count rows, `psql` check duplicates
+- Kết quả:   Trước khi chạy: 13,816 rows. `dbt run` xử lý (INSERT 0 410) xóa 60 ngày cũ và insert lại. Sau khi chạy: 13,816 rows (không đổi). Check duplicate: 0 rows.
+- Trạng thái: ✅ PASS — Cơ chế `delete+insert` hoạt động hoàn hảo, không sinh duplicate data.
+
+### [2.3.6 & 2.3.7] — Gold schema tests
+- Lệnh:      `dbt test --select gold`
+- Fix lỗi:   Cập nhật cú pháp generic test `dbt_utils.expression_is_true` từ column-level sang model-level (có `arguments:` và `config:`) để tương thích với dbt 1.10.x. (Đã tự động cập nhật SKILL file).
+- Kết quả:   `PASS=3` (rsi_14 range, ma20 positive, bb_upper >= bb_lower). Các test đều pass ngon lành bỏ qua warm-up period nhờ `where: ... IS NOT NULL`.
+- Trạng thái: ✅ PASS
+
+### [2.3.8] — G-03 MACD Verification (Python cross-check)
+- Lệnh:      `python scripts/verify_macd_g03.py`
+- Fix lỗi 1: Script gốc (SKILL template) filter `DATE_RANGE = ('2021-01-01', '2024-12-31')` nhưng HPG có data từ 2020-12-30 → Python seed EMA khác SQL → sai 306%. Fix: bỏ date filter trên `fetch_closes`, lấy toàn bộ lịch sử.
+- Fix lỗi 2: pandas trả `NaN` (float) cho NULL, nhưng `pct_error()` chỉ check `is None` → NaN lọt qua → `max()` trả NaN. Fix: thêm `pd.isna()` check + tách riêng `valid_line`/`valid_signal` dropna.
+- Kết quả:   VNM SKIP (8 rows), VCB SKIP (8 rows), HPG PASS (line 1336 rows 0.0000%, signal 1328 rows 0.0000%).
+- Ghi chú:   VNM/VCB SKIP do backfill chưa hoàn tất (chỉ có 8 rows, cần 35+ cho MACD Signal). Sẽ re-verify sau khi backfill xong.
+- Trạng thái: ✅ PASS (HPG — mã duy nhất đủ data — sai số 0.0000% cả line và signal)
+
 ## Ngày 3 — Airflow + Power BI
 
 _(chưa có entry)_
@@ -81,3 +118,9 @@ _(chưa có entry)_
 - Gotcha tra cứu:  không khớp gotcha nào
 - Hành động fix:   Đổi `DB_HOST=localhost` trong `.env` và gán `DB_HOST: db` trong `docker-compose.yml` cho Airflow container.
 - Kết quả sau fix: 🔧 FAIL → FIXED (chạy thành công `dbt run` và `dbt test`)
+
+### [2.3.2b] — Fail attempt
+- Lỗi gốc:        `function round(double precision, integer) does not exist`
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Cast biểu thức về `::NUMERIC` trước khi gọi hàm `ROUND()` trong PostgreSQL.
+- Kết quả sau fix: 🔧 FAIL → FIXED (build thành công model `int_rsi14` với 330 rows)

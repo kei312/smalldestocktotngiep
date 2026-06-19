@@ -158,25 +158,27 @@ psql -c "
 models:
   - name: fact_stock_indicators
     description: "OHLCV indicators: MA5/MA20/RSI14/MACD/Bollinger. Incremental daily."
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rsi_14 >= 0 AND rsi_14 <= 100"
+          config:
+            where: "rsi_14 IS NOT NULL"   # bỏ qua warm-up period
+
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "ma20 > 0"
+          config:
+            where: "ma20 IS NOT NULL"     # bỏ qua warm-up period
+
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "bb_upper >= bb_lower"
+          config:
+            where: "bb_upper IS NOT NULL AND bb_lower IS NOT NULL"
     columns:
       - name: rsi_14
-        tests:
-          - dbt_utils.expression_is_true:
-              expression: "rsi_14 >= 0 AND rsi_14 <= 100"
-              where: "rsi_14 IS NOT NULL"   # bỏ qua warm-up period
         description: "RSI14 Wilder. NULL trong 14 ngày đầu mỗi mã."
-
-      - name: ma20
-        tests:
-          - dbt_utils.expression_is_true:
-              expression: "ma20 > 0"
-              where: "ma20 IS NOT NULL"     # bỏ qua warm-up period
-
-      - name: bb_upper
-        tests:
-          - dbt_utils.expression_is_true:
-              expression: "bb_upper >= bb_lower"
-              where: "bb_upper IS NOT NULL AND bb_lower IS NOT NULL"
 ```
 
 > **Ghi chú:** Mọi test phải có `where: "... IS NOT NULL"` để pass trong warm-up period.

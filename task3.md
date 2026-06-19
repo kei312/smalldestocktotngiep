@@ -102,17 +102,17 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 2.2.1 | [ ] `dbt init` hoặc tạo structure thủ công | ⚪ Flash | `dbt/` folder structure | dbt project skeleton |
-| 2.2.2 | [ ] `dbt/dbt_project.yml` | 🟢 Pro High | `dbt/dbt_project.yml` | Project name, model paths, seed paths |
-| 2.2.3 | [ ] `dbt/profiles.yml` — PostgreSQL connection | 🟢 Pro High | `dbt/profiles.yml` | `dbt debug` pass |
-| 2.2.4 | [ ] `dbt/sources.yml` — khai báo Bronze tables | 🟢 Pro High | `dbt/models/sources.yml` | bronze_prices + bronze_index source definitions |
-| 2.2.5 | [ ] `dbt/models/silver/silver_prices.sql` | 🟢 Pro High | `dbt/models/silver/silver_prices.sql` | Cast types, is_valid logic, dq_flag CASE, loaded_at |
-| 2.2.6 | [ ] `dbt/models/silver/silver_index.sql` | 🟢 Pro High | `dbt/models/silver/silver_index.sql` | Tương tự cho index |
-| 2.2.7 | [ ] `dbt/models/silver/schema.yml` — tests | 🟢 Pro High | `dbt/models/silver/schema.yml` | not_null, unique, accepted_range, expression_is_true |
-| 2.2.8 | [ ] `dbt run --select silver` | ⚪ Flash | Terminal | Models materialized |
-| 2.2.9 | [ ] `dbt test --select silver` | ⚪ Flash | Terminal | Tests S-01, S-02, S-03 pass. Ghi vào `docs/TEST_REPORTS.md` |
-| 2.2.10 | [ ] Verify: query Silver kiểm tra is_valid | ⚪ Flash | SQL query | Dữ liệu clean |
-| 2.2.11 | [ ] **Commit:** `feat: Silver layer (dbt cleaning + tests)` | ⚪ Flash | git | — |
+| 2.2.1 | [x] `dbt init` hoặc tạo structure thủ công | ⚪ Flash | `dbt/` folder structure | dbt project skeleton |
+| 2.2.2 | [x] `dbt/dbt_project.yml` | 🟢 Pro High | `dbt/dbt_project.yml` | Project name, model paths, seed paths |
+| 2.2.3 | [x] `dbt/profiles.yml` — PostgreSQL connection | 🟢 Pro High | `dbt/profiles.yml` | `dbt debug` pass |
+| 2.2.4 | [x] `dbt/sources.yml` — khai báo Bronze tables | 🟢 Pro High | `dbt/models/sources.yml` | bronze_prices + bronze_index source definitions |
+| 2.2.5 | [x] `dbt/models/silver/silver_prices.sql` | 🟢 Pro High | `dbt/models/silver/silver_prices.sql` | Cast types, is_valid logic, dq_flag CASE, loaded_at |
+| 2.2.6 | [x] `dbt/models/silver/silver_index.sql` | 🟢 Pro High | `dbt/models/silver/silver_index.sql` | Tương tự cho index |
+| 2.2.7 | [x] `dbt/models/silver/schema.yml` — tests | 🟢 Pro High | `dbt/models/silver/schema.yml` | not_null, unique, accepted_range, expression_is_true |
+| 2.2.8 | [x] `dbt run --select silver` | ⚪ Flash | Terminal | Models materialized |
+| 2.2.9 | [x] `dbt test --select silver` | ⚪ Flash | Terminal | Tests S-01, S-02, S-03 pass. Ghi vào `docs/TEST_REPORTS.md` |
+| 2.2.10 | [x] Verify: query Silver kiểm tra is_valid | ⚪ Flash | SQL query | Dữ liệu clean |
+| 2.2.11 | [x] **Commit:** `feat: Silver layer (dbt cleaning + tests)` | ⚪ Flash | git | — |
 
 ---
 
@@ -122,19 +122,19 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 2.3.1 | [ ] `dbt/models/gold/fact_stock_price.sql` | 🟢 Pro High | `dbt/models/gold/fact_stock_price.sql` | SELECT từ Silver WHERE is_valid=TRUE, grain (symbol, trade_date) |
-| 2.3.2 | [ ] `dbt/macros/calculate_rsi.sql` — RSI Wilder | 🔴 **Opus** | `dbt/macros/calculate_rsi.sql` | RSI14 đúng Wilder smoothing, xử lý warm-up, SQL recursive CTE hoặc window |
-| 2.3.2b | [ ] `dbt/models/gold/intermediate/int_rsi14.sql` | 🟢 Pro High | `int_rsi14.sql` | `materialized='table'`, gọi `calculate_rsi(14)` |
-| 2.3.3 | [ ] `dbt/macros/calculate_ema.sql` — EMA, **generalized** | 🔴 **Opus** | `dbt/macros/calculate_ema.sql` | EMA recursive, nhận thêm `source_relation`/`value_column` (default fact_stock_price/close) để dùng lại được cho MACD Signal — xem SKILL_sql_indicators.md mục 3 |
-| 2.3.3b | [ ] `dbt/models/gold/intermediate/int_ema12.sql` | 🟢 Pro High | `int_ema12.sql` | `materialized='table'`, gọi `calculate_ema(12)` |
-| 2.3.3c | [ ] `dbt/models/gold/intermediate/int_ema26.sql` | 🟢 Pro High | `int_ema26.sql` | `materialized='table'`, gọi `calculate_ema(26)` |
-| 2.3.3d | [ ] `dbt/models/gold/intermediate/int_macd_line.sql` **(NEW)** | 🟢 Pro High | `int_macd_line.sql` | `materialized='table'`, `ema12 - ema26` JOIN theo (symbol, trade_date), filter NOT NULL cả 2 |
-| 2.3.3e | [ ] `dbt/models/gold/intermediate/int_macd_signal.sql` **(NEW)** | 🟢 Pro High | `int_macd_signal.sql` | `materialized='table'`, gọi `calculate_ema(9, source_relation=ref('int_macd_line'), value_column='macd_line')` |
-| 2.3.4 | [ ] `dbt/models/gold/fact_stock_indicators.sql` — incremental | 🔴 **Opus** | `dbt/models/gold/fact_stock_indicators.sql` | MA5, MA20, RSI14 (từ int_rsi14), MACD line/signal/histogram (từ int_macd_line + int_macd_signal — **KHÔNG dùng SMA window approximation**), Bollinger upper/lower. Config incremental. — **tổ hợp tất cả intermediate, logic phức tạp nhất** |
-| 2.3.5 | [ ] `dbt run --select fact_stock_indicators+` | ⚪ Flash | Terminal | Materialized thành công (dùng `+` để build cả intermediate upstream) |
-| 2.3.6 | [ ] `dbt/models/gold/schema.yml` — Gold tests | 🟢 Pro High | `dbt/models/gold/schema.yml` | RSI range [0,100], BB upper>=lower, MA20 null-or-positive |
-| 2.3.7 | [ ] `dbt test --select gold` | ⚪ Flash | Terminal | G-01 (RSI), G-02 (MA20 warm-up) pass. Ghi vào `docs/TEST_REPORTS.md` |
-| 2.3.8 | [ ] Test G-03: MACD so tính tay 3 mã | 🔴 **Opus** | `scripts/verify_macd_g03.py` | Sai số < 0.5% (thật, không nới lỏng — vì SQL nay đã dùng EMA9 chuẩn khớp đúng Python reference). Ghi kết quả vào `docs/TEST_REPORTS.md` |
+| 2.3.1 | [x] `dbt/models/gold/fact_stock_price.sql` | 🟢 Pro High | `dbt/models/gold/fact_stock_price.sql` | SELECT từ Silver WHERE is_valid=TRUE, grain (symbol, trade_date) |
+| 2.3.2 | [x] `dbt/macros/calculate_rsi.sql` — RSI Wilder | 🔴 **Opus** | `dbt/macros/calculate_rsi.sql` | RSI14 đúng Wilder smoothing, xử lý warm-up, SQL recursive CTE hoặc window |
+| 2.3.2b | [x] `dbt/models/gold/intermediate/int_rsi14.sql` | 🟢 Pro High | `int_rsi14.sql` | `materialized='table'`, gọi `calculate_rsi(14)` |
+| 2.3.3 | [x] `dbt/macros/calculate_ema.sql` — EMA, **generalized** | 🔴 **Opus** | `dbt/macros/calculate_ema.sql` | EMA recursive, nhận thêm `source_relation`/`value_column` (default fact_stock_price/close) để dùng lại được cho MACD Signal — xem SKILL_sql_indicators.md mục 3 |
+| 2.3.3b | [x] `dbt/models/gold/intermediate/int_ema12.sql` | 🟢 Pro High | `int_ema12.sql` | `materialized='table'`, gọi `calculate_ema(12)` |
+| 2.3.3c | [x] `dbt/models/gold/intermediate/int_ema26.sql` | 🟢 Pro High | `int_ema26.sql` | `materialized='table'`, gọi `calculate_ema(26)` |
+| 2.3.3d | [x] `dbt/models/gold/intermediate/int_macd_line.sql` **(NEW)** | 🟢 Pro High | `int_macd_line.sql` | `materialized='table'`, `ema12 - ema26` JOIN theo (symbol, trade_date), filter NOT NULL cả 2 |
+| 2.3.3e | [x] `dbt/models/gold/intermediate/int_macd_signal.sql` **(NEW)** | 🟢 Pro High | `int_macd_signal.sql` | `materialized='table'`, gọi `calculate_ema(9, source_relation=ref('int_macd_line'), value_column='macd_line')` |
+| 2.3.4 | [x] `dbt/models/gold/fact_stock_indicators.sql` — incremental | 🔴 **Opus** | `dbt/models/gold/fact_stock_indicators.sql` | MA5, MA20, RSI14 (từ int_rsi14), MACD line/signal/histogram (từ int_macd_line + int_macd_signal — **KHÔNG dùng SMA window approximation**), Bollinger upper/lower. Config incremental. — **tổ hợp tất cả intermediate, logic phức tạp nhất** |
+| 2.3.5 | [x] `dbt run --select fact_stock_indicators+` | ⚪ Flash | Terminal | Materialized thành công (dùng `+` để build cả intermediate upstream) |
+| 2.3.6 | [x] `dbt/models/gold/schema.yml` — Gold tests | 🟢 Pro High | `dbt/models/gold/schema.yml` | RSI range [0,100], BB upper>=lower, MA20 null-or-positive |
+| 2.3.7 | [x] `dbt test --select gold` | ⚪ Flash | Terminal | G-01 (RSI), G-02 (MA20 warm-up) pass. Ghi vào `docs/TEST_REPORTS.md` |
+| 2.3.8 | [x] Test G-03: MACD so tính tay 3 mã | 🔴 **Opus** | `scripts/verify_macd_g03.py` | Sai số < 0.5% (thật, không nới lỏng — vì SQL nay đã dùng EMA9 chuẩn khớp đúng Python reference). Ghi kết quả vào `docs/TEST_REPORTS.md` |
 | 2.3.9 | [ ] **Commit:** `feat: Gold indicators (MA/RSI/MACD-EMA9/Bollinger)` | ⚪ Flash | git | — |
 | 2.3.10 | [ ] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | — |
 

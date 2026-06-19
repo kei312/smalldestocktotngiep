@@ -613,3 +613,4 @@ if __name__ == "__main__":
 | Lồng WITH RECURSIVE trong CTE khác | Tạo intermediate model riêng, materialized |
 | MA20 trả về 0 thay NULL khi warm-up | CASE WHEN rn >= 20 THEN ... ELSE NULL END |
 | `int_macd_line`/`int_macd_signal` để `materialized='incremental'` | Phải là `'table'` — full rebuild mỗi lần, giống int_ema12/26/rsi14 |
+| Lỗi `function round(double precision, integer) does not exist` | PostgreSQL không cho `ROUND(float, decimals)`. Phải cast sang NUMERIC: `ROUND(expr::NUMERIC, 4)` |
