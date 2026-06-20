@@ -93,7 +93,7 @@ with DAG(
         task_id="fetch_prices",
         bash_command=(
             f"{RUN_PREFIX} python -m ingestion.fetch_prices "
-            "--start {{ ds }} --end {{ ds }} --skip-index"
+            "--start {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --end {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --skip-index"
         ),
         retries=3,
         retry_delay=timedelta(minutes=2),
@@ -106,7 +106,7 @@ with DAG(
         task_id="fetch_index",
         bash_command=(
             f"{RUN_PREFIX} python -m ingestion.fetch_prices "
-            "--start {{ ds }} --end {{ ds }} --skip-prices"
+            "--start {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --end {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --skip-prices"
         ),
         retries=3,
         retry_delay=timedelta(minutes=2),

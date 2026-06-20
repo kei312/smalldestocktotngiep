@@ -105,6 +105,23 @@
 - Thời gian: 2026-06-20 11:51
 - Trạng thái: ✅ PASS
 
+### [3.2.5] — Trigger dag_daily (Success Test)
+- Lệnh:      Trigger DAG `daily_stock_pipeline` qua CLI/UI.
+- Kết quả:   Chạy thành công toàn bộ luồng pipeline từ ingestion tới dbt_gold.
+- Thời gian: 2026-06-20 12:05
+- Trạng thái: ✅ PASS
+
+### [3.2.6] — Test A-01: Fail Fetch & Upstream Failed
+- Lệnh:      Chèn `raise ValueError` vào `fetch_prices.py` và Trigger lại DAG.
+- Kết quả:   `fetch_prices` chuyển sang `up_for_retry` (Vàng) và cuối cùng là `failed` (Đỏ). Toàn bộ các task dbt phía sau bị chặn lại ở trạng thái `upstream_failed` (Cam).
+- Thời gian: 2026-06-20 12:15
+- Trạng thái: ✅ PASS (Cơ chế bảo vệ dữ liệu hoạt động chính xác).
+
+### [System Log] — VNStock API Timeout
+- Hiện tượng: Khi bật DAG chạy thực tế, `fetch_prices` liên tục rơi vào trạng thái `up_for_retry` do API VNStock phản hồi chậm/lỗi mạng (rất phổ biến).
+- Hành động: Đã áp dụng quy tắc Fallback trong `AGENTS.md` -> Đổi `PROVIDER=mock` trong file `.env` để sử dụng dữ liệu giả lập tiếp tục luồng.
+- Thời gian: 2026-06-20 12:33
+
 ---
 
 ## Fail Log (theo AGENTS.md Section 2.5)
@@ -150,3 +167,9 @@
 - Gotcha tra cứu:  không khớp gotcha nào
 - Hành động fix:   Cập nhật `docker-compose.yml`, pin chặt `dbt-core==1.10.22` cùng với `dbt-postgres==1.10.0`.
 - Kết quả sau fix: 🔧 FAIL → FIXED (Recreate container cài đúng bản `1.10.22`)
+
+### [3.2.5] — Fail attempt (Airflow DAG execution)
+- Lỗi gốc:        `ModuleNotFoundError: No module named 'ingestion'` và `PermissionError: [Errno 13] Permission denied: '/opt/airflow/project/dbt/logs'`
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Thêm `export PYTHONPATH=/opt/airflow/project` vào BashOperator của Airflow DAG. Cấp quyền read/write cho thư mục `dbt/logs` và `dbt/target` thông qua mount volume hoặc `chmod -R 777 dbt` trên host.
+- Kết quả sau fix: 🔧 FAIL → FIXED (Chạy thành công `dbt build` trong container, records vào đúng schema Silver/Gold)

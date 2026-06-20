@@ -51,16 +51,16 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 1.2.1 | [ ] `providers/__init__.py` | ⚪ Flash | `providers/__init__.py` | Export classes |
-| 1.2.2 | [ ] `providers/base.py` — ABC + 3 exceptions | 🔴 **Opus** | `providers/base.py` | DataProvider ABC (get_prices, get_index, health_check), ProviderError/RateLimitError/TimeoutError/SchemaError, type hints, docstrings — **interface design là kiến trúc** |
-| 1.2.3 | [ ] `providers/vnstock_provider.py` | 🟠 Sonnet | `providers/vnstock_provider.py` | Bọc vnstock 4.x, map exceptions, health_check, trả DataFrame chuẩn |
-| 1.2.4 | [ ] `tests/fixtures/mock_prices.csv` — 30+ dòng VN30 | 🟢 Pro High | `tests/fixtures/mock_prices.csv` | Realistic OHLCV, ~30 dòng, 5–10 mã trong nhóm: VNM (60–75k), VCB (85–95k), HPG (25–32k), FPT (120–140k), VIC (40–55k), MWG (45–60k), MSN (65–80k), CTG (30–40k). Mọi dòng: high ≥ open,close ≥ low; volume > 0 |
-| 1.2.5 | [ ] `tests/fixtures/mock_index.csv` | 🟢 Pro High | `tests/fixtures/mock_index.csv` | VNINDEX + VN30 data |
-| 1.2.6 | [ ] `providers/mock_provider.py` | 🟢 Pro High | `providers/mock_provider.py` | Đọc CSV fixture, trả DataFrame cùng schema, support get_prices + get_index + health_check |
-| 1.2.7 | [ ] `providers/registry.py` | 🟢 Pro High | `providers/registry.py` | get_provider() đọc env PROVIDER → instance |
-| 1.2.8 | [ ] `tests/test_providers.py` — P-01 đến P-05 | 🟢 Pro High | `tests/test_providers.py` | 5 test functions, pytest |
-| 1.2.9 | [ ] Chạy pytest test_providers.py | ⚪ Flash | `pytest tests/test_providers.py -v` | All pass. Ghi kết quả vào `docs/TEST_REPORTS.md` |
-| 1.2.10 | [ ] **Commit:** `feat: provider layer (vnstock + mock + registry)` | ⚪ Flash | git | — |
+| 1.2.1 | [x] `providers/__init__.py` | ⚪ Flash | `providers/__init__.py` | Export classes |
+| 1.2.2 | [x] `providers/base.py` — ABC + 3 exceptions | 🔴 **Opus** | `providers/base.py` | DataProvider ABC (get_prices, get_index, health_check), ProviderError/RateLimitError/TimeoutError/SchemaError, type hints, docstrings — **interface design là kiến trúc** |
+| 1.2.3 | [x] `providers/vnstock_provider.py` | 🟠 Sonnet | `providers/vnstock_provider.py` | Bọc vnstock 4.x, map exceptions, health_check, trả DataFrame chuẩn |
+| 1.2.4 | [x] `tests/fixtures/mock_prices.csv` — 30+ dòng VN30 | 🟢 Pro High | `tests/fixtures/mock_prices.csv` | Realistic OHLCV, ~30 dòng, 5–10 mã trong nhóm: VNM (60–75k), VCB (85–95k), HPG (25–32k), FPT (120–140k), VIC (40–55k), MWG (45–60k), MSN (65–80k), CTG (30–40k). Mọi dòng: high ≥ open,close ≥ low; volume > 0 |
+| 1.2.5 | [x] `tests/fixtures/mock_index.csv` | 🟢 Pro High | `tests/fixtures/mock_index.csv` | VNINDEX + VN30 data |
+| 1.2.6 | [x] `providers/mock_provider.py` | 🟢 Pro High | `providers/mock_provider.py` | Đọc CSV fixture, trả DataFrame cùng schema, support get_prices + get_index + health_check |
+| 1.2.7 | [x] `providers/registry.py` | 🟢 Pro High | `providers/registry.py` | get_provider() đọc env PROVIDER → instance |
+| 1.2.8 | [x] `tests/test_providers.py` — P-01 đến P-05 | 🟢 Pro High | `tests/test_providers.py` | 5 test functions, pytest |
+| 1.2.9 | [x] Chạy pytest test_providers.py | ⚪ Flash | `pytest tests/test_providers.py -v` | All pass. Ghi kết quả vào `docs/TEST_REPORTS.md` |
+| 1.2.10 | [x] **Commit:** `feat: provider layer (vnstock + mock + registry)` | ⚪ Flash | git | — |
 
 ---
 
@@ -68,17 +68,17 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 1.3.1 | [ ] `ingestion/__init__.py` | ⚪ Flash | `ingestion/__init__.py` | — |
-| 1.3.2 | [ ] `ingestion/config.py` — Config dataclass | 🟢 Pro High | `ingestion/config.py` | @dataclass, đọc .env, fields: db_url, provider, symbols_pilot, batch_size, retry_max |
-| 1.3.3 | [ ] `ingestion/utils.py` — retry decorator + logger setup | 🟠 Sonnet | `ingestion/utils.py` | @retry(max_attempts, backoff_base, jitter, retry_on), logging config, validate_dataframe() |
-| 1.3.4 | [ ] `ingestion/fetch_prices.py` — UPSERT Bronze | 🟠 Sonnet | `ingestion/fetch_prices.py` | Gọi provider.get_prices(), validate schema, ON CONFLICT DO UPDATE, log row count, source tracking |
-| 1.3.5 | [ ] `ingestion/fetch_index.py` | 🟢 Pro High | `ingestion/fetch_index.py` | Tương tự fetch_prices cho VNINDEX/VN30 |
-| 1.3.6 | [ ] Chạy fetch_prices VN30 thật → Bronze | ⚪ Flash | `python -m ingestion.fetch_prices` | `SELECT COUNT(*) FROM bronze.bronze_prices` > 0 |
-| 1.3.7 | [ ] Chạy lại → verify idempotency (đếm dòng) | ⚪ Flash | SQL: `SELECT COUNT(*)` trước và sau | count bằng nhau |
-| 1.3.8 | [ ] `tests/test_ingestion.py` — B-01 đến B-04 | 🟢 Pro High | `tests/test_ingestion.py` | 4 test functions |
-| 1.3.9 | [ ] Chạy pytest test_ingestion.py | ⚪ Flash | `pytest tests/test_ingestion.py -v` | All pass. Ghi kết quả vào `docs/TEST_REPORTS.md` |
-| 1.3.10 | [ ] **Commit:** `feat: ingestion layer + idempotent UPSERT` | ⚪ Flash | git | — |
-| 1.3.11 | [ ] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | Ghi đã xong gì ngày 1 |
+| 1.3.1 | [x] `ingestion/__init__.py` | ⚪ Flash | `ingestion/__init__.py` | — |
+| 1.3.2 | [x] `ingestion/config.py` — Config dataclass | 🟢 Pro High | `ingestion/config.py` | @dataclass, đọc .env, fields: db_url, provider, symbols_pilot, batch_size, retry_max |
+| 1.3.3 | [x] `ingestion/utils.py` — retry decorator + logger setup | 🟠 Sonnet | `ingestion/utils.py` | @retry(max_attempts, backoff_base, jitter, retry_on), logging config, validate_dataframe() |
+| 1.3.4 | [x] `ingestion/fetch_prices.py` — UPSERT Bronze | 🟠 Sonnet | `ingestion/fetch_prices.py` | Gọi provider.get_prices(), validate schema, ON CONFLICT DO UPDATE, log row count, source tracking |
+| 1.3.5 | [x] `ingestion/fetch_index.py` | 🟢 Pro High | `ingestion/fetch_index.py` | Tương tự fetch_prices cho VNINDEX/VN30 |
+| 1.3.6 | [x] Chạy fetch_prices VN30 thật → Bronze | ⚪ Flash | `python -m ingestion.fetch_prices` | `SELECT COUNT(*) FROM bronze.bronze_prices` > 0 |
+| 1.3.7 | [x] Chạy lại → verify idempotency (đếm dòng) | ⚪ Flash | SQL: `SELECT COUNT(*)` trước và sau | count bằng nhau |
+| 1.3.8 | [x] `tests/test_ingestion.py` — B-01 đến B-04 | 🟢 Pro High | `tests/test_ingestion.py` | 4 test functions |
+| 1.3.9 | [x] Chạy pytest test_ingestion.py | ⚪ Flash | `pytest tests/test_ingestion.py -v` | All pass. Ghi kết quả vào `docs/TEST_REPORTS.md` |
+| 1.3.10 | [x] **Commit:** `feat: ingestion layer + idempotent UPSERT` | ⚪ Flash | git | — |
+| 1.3.11 | [x] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | Ghi đã xong gì ngày 1 |
 
 > **⏸ Gate ngày 1:** Bronze có data VN30 thật. Provider + Ingestion tests pass. Idempotency verified.
 
@@ -90,11 +90,11 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 2.1.1 | [ ] `ingestion/backfill.py` — batch, resume, rate-limit | 🟠 Sonnet | `ingestion/backfill.py` | Batch by symbols (batch_size), skip existing dates, sleep between batches, progress bar/logging, CLI args --start --end |
-| 2.1.2 | [ ] Chạy backfill VN30, 5 năm | ⚪ Flash | `python -m ingestion.backfill --start 2021-01-01 --end 2026-06-18` | ~37,800 dòng trong Bronze |
-| 2.1.3 | [ ] Verify phân bố năm | ⚪ Flash | SQL query | Mỗi năm có data |
-| 2.1.4 | [ ] Chạy backfill lần 2 → idempotency ở scale | ⚪ Flash | So sánh COUNT trước/sau | Không tăng |
-| 2.1.5 | [ ] **Commit:** `feat: backfill 5yr VN30 data` | ⚪ Flash | git | — |
+| 2.1.1 | [x] `ingestion/backfill.py` — batch, resume, rate-limit | 🟠 Sonnet | `ingestion/backfill.py` | Batch by symbols (batch_size), skip existing dates, sleep between batches, progress bar/logging, CLI args --start --end |
+| 2.1.2 | [x] Chạy backfill VN30, 5 năm | ⚪ Flash | `python -m ingestion.backfill --start 2021-01-01 --end 2026-06-18` | ~37,800 dòng trong Bronze |
+| 2.1.3 | [x] Verify phân bố năm | ⚪ Flash | SQL query | Mỗi năm có data |
+| 2.1.4 | [x] Chạy backfill lần 2 → idempotency ở scale | ⚪ Flash | So sánh COUNT trước/sau | Không tăng |
+| 2.1.5 | [x] **Commit:** `feat: backfill 5yr VN30 data` | ⚪ Flash | git | — |
 
 ---
 
@@ -154,28 +154,37 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 3.1.1 | [ ] `dbt/models/gold/fact_market_summary.sql` | 🟢 Pro High | `dbt/models/gold/fact_market_summary.sql` | gainers/losers/unchanged/volume/vnindex/vn30 per trade_date |
-| 3.1.2 | [ ] `dbt/models/gold/dim_stock.sql` | 🟢 Pro High | `dbt/models/gold/dim_stock.sql` | DISTINCT symbol, exchange (+ industry nếu có) |
-| 3.1.3 | [ ] `dbt/seeds/dim_date.csv` — calendar 2020–2026 | 🟢 Pro High | `dbt/seeds/dim_date.csv` | date, day_of_week, month, quarter, year, is_trading_day |
-| 3.1.4 | [ ] `dbt seed` + verify dim_date | ⚪ Flash | `dbt seed` | Table materialized |
-| 3.1.5 | [ ] Test G-04: market summary totals | 🟢 Pro High | schema.yml update | gainers+losers+unchanged = total |
-| 3.1.6 | [ ] `dbt run && dbt test` — toàn bộ | ⚪ Flash | Terminal | All pass |
-| 3.1.7 | [ ] `dbt docs generate` → **📸 chụp lineage graph** | ⚪ Flash | `dbt docs generate && dbt docs serve` | Screenshot saved (lineage giờ có thêm 5 intermediate nodes — bình thường, không phải lỗi) |
-| 3.1.8 | [ ] **Commit:** `feat: complete Gold star schema + lineage` | ⚪ Flash | git | — |
+| 3.1.1 | [x] `dbt/models/gold/fact_market_summary.sql` | 🟢 Pro High | `dbt/models/gold/fact_market_summary.sql` | gainers/losers/unchanged/volume/vnindex/vn30 per trade_date |
+| 3.1.2 | [x] `dbt/models/gold/dim_stock.sql` | 🟢 Pro High | `dbt/models/gold/dim_stock.sql` | DISTINCT symbol, exchange (+ industry nếu có) |
+| 3.1.3 | [x] `dbt/seeds/dim_date.csv` — calendar 2020–2026 | 🟢 Pro High | `dbt/seeds/dim_date.csv` | date, day_of_week, month, quarter, year, is_trading_day |
+| 3.1.4 | [x] `dbt seed` + verify dim_date | ⚪ Flash | `dbt seed` | Table materialized |
+| 3.1.5 | [x] Test G-04: market summary totals | 🟢 Pro High | schema.yml update | gainers+losers+unchanged = total |
+| 3.1.6 | [x] `dbt run && dbt test` — toàn bộ | ⚪ Flash | Terminal | All pass |
+| 3.1.7 | [x] `dbt docs generate` → **📸 chụp lineage graph** | ⚪ Flash | `dbt docs generate && dbt docs serve` | Screenshot saved (lineage giờ có thêm 5 intermediate nodes — bình thường, không phải lỗi) |
+| 3.1.8 | [x] **Commit:** `feat: complete Gold star schema + lineage` | ⚪ Flash | git | — |
 
 ---
 
 ### 3.2 Airflow (Chiều — ~2.5h)
 
+> **⚠️ Thiết kế đã chỉnh sửa (20/06):**
+> Kế hoạch gốc đặt "Mount DAGs" ở bước 3.2.3 (sau khi viết DAG). Đây là lỗi thứ tự:
+> 1. `docker-compose.yml` hiện tại chỉ mount `./dags` — container không thấy `ingestion/`, `providers/`, `dbt/`.
+> 2. `PythonOperator` sẽ crash (`ModuleNotFoundError`) vì thiếu source code.
+> 3. `dbt` chưa được cài trong container (`_PIP_ADDITIONAL_REQUIREMENTS` thiếu `dbt-postgres`).
+>
+> **Giải pháp:** Đưa việc sửa `docker-compose.yml` lên **bước đầu tiên**, mount toàn bộ project,
+> cài `dbt-postgres`, và chuyển DAG sang dùng `BashOperator` thay vì `PythonOperator`.
+
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 3.2.1 | [ ] `dags/dag_daily.py` — full pipeline DAG | 🔴 **Opus** | `dags/dag_daily.py` | health_check → fetch_prices → fetch_index → dbt_silver → test_silver → dbt_gold → test_gold → notify. Retry 3x exponential. on_failure_callback. — **orchestration là kiến trúc** |
-| 3.2.2 | [ ] `dags/dag_backfill.py` — manual trigger | 🟢 Pro High | `dags/dag_backfill.py` | Params: start_date, end_date. Manual trigger only. |
-| 3.2.3 | [ ] Mount/copy DAGs vào Airflow | ⚪ Flash | docker volume hoặc cp | DAGs visible trong UI |
-| 3.2.4 | [ ] Trigger dag_daily → verify qua CLI/API trước → **📸 screenshot DAG success** | ⚪ Flash | `airflow dags list-runs` / Airflow UI | CLI xác nhận state=success trước, sau đó chụp ảnh UI để làm bằng chứng nộp |
-| 3.2.5 | [ ] Test A-01: fail fetch → Silver skipped | ⚪ Flash | `airflow tasks states-for-dag-run` / Airflow UI | Silver không chạy |
-| 3.2.6 | [ ] Verify retry → **📸 screenshot retry** | ⚪ Flash | Airflow UI | Screenshot: retry visible |
-| 3.2.7 | [ ] **Commit:** `feat: Airflow DAGs (daily + backfill)` | ⚪ Flash | git | — |
+| 3.2.1 | [x] Sửa `docker-compose.yml` — mount project + cài dbt | 🔴 **Opus** | `docker-compose.yml` | Thêm volume `./:/opt/airflow/project`, thêm `dbt-postgres==1.10.0` vào `_PIP_ADDITIONAL_REQUIREMENTS`, fix quyền `dags/` (`sudo chown`). `docker compose up -d` thành công. — **quyết định kiến trúc container** |
+| 3.2.2 | [x] `dags/dag_daily.py` — full pipeline DAG (**BashOperator**) | 🔴 **Opus** | `dags/dag_daily.py` | health_check → fetch_prices → fetch_index → dbt_silver → test_silver → dbt_gold → test_gold → notify. Dùng `BashOperator` gọi `python -m ingestion.fetch_prices` và `dbt run` từ `/opt/airflow/project`. Retry 3x exponential. on_failure_callback. — **orchestration là kiến trúc** |
+| 3.2.3 | [x] `dags/dag_backfill.py` — manual trigger (**BashOperator**) | 🟢 Pro High | `dags/dag_backfill.py` | Params: start_date, end_date. Manual trigger only. Gọi `python -m ingestion.backfill` từ `/opt/airflow/project`. |
+| 3.2.4 | [x] Restart Airflow → verify DAGs visible | ⚪ Flash | `docker compose restart airflow` | DAGs xuất hiện trong Airflow UI (:8080) |
+| 3.2.5 | [x] Trigger dag_daily → verify success → **📸 screenshot DAG success** | ⚪ Flash | `airflow dags list-runs` / Airflow UI | CLI xác nhận state=success, chụp ảnh UI làm bằng chứng |
+| 3.2.6 | [x] Test A-01: fail fetch → Silver skipped + **📸 screenshot retry** | ⚪ Flash | `airflow tasks states-for-dag-run` / Airflow UI | Silver không chạy khi fetch fail. Retry visible trong UI |
+| 3.2.7 | [x] **Commit:** `feat: Airflow DAGs (daily + backfill)` | ⚪ Flash | git | — |
 
 ---
 
