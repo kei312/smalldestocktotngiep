@@ -1,4 +1,4 @@
-# Task Tracker — Step-by-Step (4 ngày)
+# Task Tracker — Step-by-Step (4 part)
 
 > **v2 (19/06):** đã tích hợp 3 quyết định chốt:
 > 1. MACD Signal dùng EMA9 thật (thêm task 2.3.3d/2.3.3e) — không còn SMA approximation.
@@ -27,7 +27,7 @@
 
 ---
 
-## NGÀY 1 — Foundation + Provider + Bronze
+## part 1 — Foundation + Provider + Bronze
 
 ### 1.1 Hạ tầng (Sáng — ~2h)
 
@@ -40,7 +40,7 @@
 | 1.1.5 | [ ] `docker-compose.yml` — Airflow 3.2.x + PostgreSQL 17 | 🟢 Pro High | `docker-compose.yml` | `docker compose up -d` thành công, Airflow UI accessible :8080 |
 | 1.1.6 | [ ] `sql/init_schema.sql` — Bronze schema + partitions | 🟢 Pro High | `sql/init_schema.sql` | Schema `bronze`, table `bronze_prices` PK(code,date), partition 2020-2026, bronze_index |
 | 1.1.7 | [ ] Chạy init_schema trên PostgreSQL | ⚪ Flash | `psql -f sql/init_schema.sql` | `\dt bronze.*` hiện tables |
-| 1.1.8 | [ ] Test vnstock 4.x lấy thử VNM, 7 ngày | ⚪ Flash | Python REPL | DataFrame trả về, đủ cột OHLCV. Nếu fail vì mạng/API → set `PROVIDER=mock`, ghi `STATUS.md`, tiếp tục (xem AGENTS.md Section 0) |
+| 1.1.8 | [ ] Test vnstock 4.x lấy thử VNM, 7 part | ⚪ Flash | Python REPL | DataFrame trả về, đủ cột OHLCV. Nếu fail vì mạng/API → set `PROVIDER=mock`, ghi `STATUS.md`, tiếp tục (xem AGENTS.md Section 0) |
 | 1.1.9 | [ ] **Commit:** `chore: init project + docker + bronze schema` | ⚪ Flash | git | — |
 
 > **⏸ Gate 1.1:** PostgreSQL running + vnstock hoạt động (hoặc MockProvider nếu vnstock fail). Nếu fail mà không khớp gotcha nào → xem AGENTS.md Section 2.5.
@@ -78,13 +78,13 @@
 | 1.3.8 | [x] `tests/test_ingestion.py` — B-01 đến B-04 | 🟢 Pro High | `tests/test_ingestion.py` | 4 test functions |
 | 1.3.9 | [x] Chạy pytest test_ingestion.py | ⚪ Flash | `pytest tests/test_ingestion.py -v` | All pass. Ghi kết quả vào `docs/TEST_REPORTS.md` |
 | 1.3.10 | [x] **Commit:** `feat: ingestion layer + idempotent UPSERT` | ⚪ Flash | git | — |
-| 1.3.11 | [x] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | Ghi đã xong gì ngày 1 |
+| 1.3.11 | [x] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | Ghi đã xong gì part 1 |
 
-> **⏸ Gate ngày 1:** Bronze có data VN30 thật. Provider + Ingestion tests pass. Idempotency verified.
+> **⏸ Gate part 1:** Bronze có data VN30 thật. Provider + Ingestion tests pass. Idempotency verified.
 
 ---
 
-## NGÀY 2 — Backfill + Silver + Gold Indicators
+## part 2 — Backfill + Silver + Gold Indicators
 
 ### 2.1 Backfill (Sáng — ~2.5h)
 
@@ -138,7 +138,7 @@
 | 2.3.9 | [x] **Commit:** `feat: Gold indicators (MA/RSI/MACD-EMA9/Bollinger)` | ⚪ Flash | git | — |
 | 2.3.10 | [x] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | — |
 
-> **⏸ Gate ngày 2:** `dbt run && dbt test` pass Silver + Gold (kể cả 5 intermediate models). Indicators tính đúng. G-03 < 0.5% thật.
+> **⏸ Gate part 2:** `dbt run && dbt test` pass Silver + Gold (kể cả 5 intermediate models). Indicators tính đúng. G-03 < 0.5% thật.
 
 > [!WARNING]
 > **2.3.2 + 2.3.3 dùng Opus.** RSI Wilder + EMA recursive (kể cả bản generalized cho MACD Signal)
@@ -148,7 +148,7 @@
 
 ---
 
-## NGÀY 3 — Gold hoàn chỉnh + Airflow + Power BI
+## part 3 — Gold hoàn chỉnh + Airflow + Power BI
 
 ### 3.1 Gold hoàn chỉnh (Sáng — ~2h)
 
@@ -199,7 +199,7 @@
 | 3.3.0 | [ ] Đọc `docs/POWERBI_QUICKSTART.md` (15 phút) | — (UI) | — | Hiểu rõ các bước chốt cho deadline 20/06 trước khi mở Power BI |
 | 3.3.1 | [ ] Kết nối Power BI → PostgreSQL Gold | — (UI) | Power BI Desktop | Connection OK, chọn Import (an toàn) hoặc DirectQuery (xem mục 1 trong quickstart) |
 | 3.3.2 | [ ] Data model: relationships fact↔dim | — (UI) | Power BI | Star schema (nối dim_stock, dim_date). Mark as date table cho dim_date (xem mục 2 trong quickstart) |
-| 3.3.3 | [ ] **Dashboard 1: Market Overview** | — (UI) | Power BI | Slicer ngày (Single select) dựng trước. Measure DAX (Percent Change, Latest Total Volume). Visuals: VNINDEX line, Gainers/Losers bar (Values: gainers/losers/unchanged, Axis trống, gotcha sum cộng dồn), Volume card (measure), Top Movers table (Top 10 filter, sort Desc) (xem mục 3 trong quickstart) |
+| 3.3.3 | [ ] **Dashboard 1: Market Overview** | — (UI) | Power BI | Slicer part (Single select) dựng trước. Measure DAX (Percent Change, Latest Total Volume). Visuals: VNINDEX line, Gainers/Losers bar (Values: gainers/losers/unchanged, Axis trống, gotcha sum cộng dồn), Volume card (measure), Top Movers table (Top 10 filter, sort Desc) (xem mục 3 trong quickstart) |
 | 3.3.4 | [ ] **Dashboard 2: Stock Analysis (đã đơn giản hoá)** | — (UI) | Power BI | Symbol slicer (single select), Close+MA overlay line chart (close, ma5, ma20), RSI14 line chart (Constant line 30/70), MACD line+signal chart, Bollinger Bands line chart (close, bb_upper, bb_lower) (xem mục 4 trong quickstart) |
 | 3.3.5 | [ ] **📸 Screenshot cả 2 dashboards** | — | Ảnh | — |
 | 3.3.6 | [ ] Lưu `.pbix` | — | `reports/stock_dashboard.pbix` | — |
@@ -207,17 +207,17 @@
 | 3.3.8 | [ ] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | — |
 | 3.3.9 | [x] **[Plan B — chỉ làm nếu quá time-box 2h]** Generate `reports/dashboard_backup.html` |  ⚪ Flash | `reports/dashboard_backup.html` | Script Python (psycopg2 + plotly) đọc trực tiếp Gold, xuất HTML tĩnh không cần Power BI. KHÔNG thay thế yêu cầu nộp `.pbix` — chỉ là lưới an toàn demo (xem mục Plan B trong quickstart) |
 
-> **⏸ Gate ngày 3:** Airflow E2E thành công (verify qua CLI). 2 dashboards hiển thị đúng (hoặc Plan B nếu quá time-box). Lineage exported.
+> **⏸ Gate part 3:** Airflow E2E thành công (verify qua CLI). 2 dashboards hiển thị đúng (hoặc Plan B nếu quá time-box). Lineage exported.
 
 ---
 
-## NGÀY 4 — Hoàn thiện + Docs + Báo cáo
+## part 4 — Hoàn thiện + Docs + Báo cáo
 
-### 4.1 Power BI hoàn thiện (Sáng — ~1.5h) — STRETCH, không bắt buộc nếu Ngày 3 đã dùng Plan B
+### 4.1 Power BI hoàn thiện (Sáng — ~1.5h) 
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 4.1.1 | [ ] **Dashboard 3: Xu hướng Gainers/Losers theo thời gian** (Định nghĩa lại) | — (UI) | Power BI | Slicer khoảng ngày (Between style). Line/Area chart xem xu hướng gainers vs losers theo ngày (trục trade_date), optional area chart cho total_volume (xem mục 4b trong quickstart) |
+| 4.1.1 | [ ] **Dashboard 3: Xu hướng Gainers/Losers theo thời gian** (Định nghĩa lại) | — (UI) | Power BI | Slicer khoảng part (Between style). Line/Area chart xem xu hướng gainers vs losers theo part (trục trade_date), optional area chart cho total_volume (xem mục 4b trong quickstart) |
 | 4.1.2 | [ ] **Dashboard 4: Fundamentals** (nếu có data) | — (UI) | Power BI | Chỉ làm SAU KHI có fact_fundamentals. Card/Table PE, PB, ROE theo symbol, slicer dùng chung (xem mục 4b trong quickstart) |
 | 4.1.3 | [ ] **📸 Screenshot all dashboards** | — | Ảnh | — |
 | 4.1.4 | [ ] **Commit:** `feat: Power BI dashboards 3+4` | ⚪ Flash | git | — |
@@ -266,16 +266,16 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 4.5.1 | [ ] Thu thập screenshots | — | Folder | ≥6 ảnh |
-| 4.5.2 | [ ] Viết: Giới thiệu + Bài toán | 🟢 Pro High | Báo cáo | — |
-| 4.5.3 | [ ] Viết: Kiến trúc (sơ đồ + giải thích) | 🟢 Pro High | Báo cáo | Copy + mở rộng từ CONTEXT.md |
-| 4.5.4 | [ ] Viết: Thiết kế chi tiết | 🟢 Pro High | Báo cáo | Modules, schema, data flow (bao gồm intermediate models cho indicators) |
-| 4.5.5 | [ ] Viết: Kết quả + screenshots | 🟢 Pro High | Báo cáo | Embed ảnh |
-| 4.5.6 | [ ] Viết: Đánh giá + Hạn chế + Kết luận | 🔴 **Opus** | Báo cáo | Suy luận sâu: đã làm gì, hướng phát triển |
-| 4.5.7 | [ ] **Commit:** `docs: draft report` | ⚪ Flash | git | — |
-| 4.5.8 | [ ] **Final commit:** `chore: project complete` | ⚪ Flash | git | — |
+| 4.5.1 | [x] Thu thập screenshots | — | Folder | ≥6 ảnh |
+| 4.5.2 | [x] Viết: Giới thiệu + Bài toán | 🟢 Pro High | Báo cáo | — |
+| 4.5.3 | [x] Viết: Kiến trúc (sơ đồ + giải thích) | 🟢 Pro High | Báo cáo | Copy + mở rộng từ CONTEXT.md |
+| 4.5.4 | [x] Viết: Thiết kế chi tiết | 🟢 Pro High | Báo cáo | Modules, schema, data flow (bao gồm intermediate models cho indicators) |
+| 4.5.5 | [x] Viết: Kết quả + screenshots | 🟢 Pro High | Báo cáo | Embed ảnh |
+| 4.5.6 | [x] Viết: Đánh giá + Hạn chế + Kết luận | 🔴 **Opus** | Báo cáo | Suy luận sâu: đã làm gì, hướng phát triển |
+| 4.5.7 | [x] **Commit:** `docs: draft report` | ⚪ Flash | git | — |
+| 4.5.8 | [x] **Final commit:** `chore: project complete` | ⚪ Flash | git | — |
 
-> **⏸ Gate ngày 4:** Sản phẩm E2E. Báo cáo nháp đủ sections + screenshots. Git log đều 4 ngày.
+> **⏸ Gate part 4:** Sản phẩm E2E. Báo cáo nháp đủ sections + screenshots. Git log đều 4 part.
 >
 > **Lưu ý báo cáo:** nếu trường có template/outline chính thức cho báo cáo ĐATN, ưu tiên bám theo
 > đó thay vì cấu trúc generic ở trên — đưa file template vào `docs/` nếu có.
@@ -315,7 +315,7 @@
 - [ ] `docs/ADR/ADR-002-dbt.md`
 - [ ] `docs/ADR/ADR-003-provider.md`
 - [ ] `docs/ADR/ADR-004-macd-signal.md` **(NEW)**
-- [ ] `docs/TEST_REPORTS.md` **(NEW — phải tồn tại từ đầu Ngày 1)**
+- [ ] `docs/TEST_REPORTS.md` **(NEW — phải tồn tại từ đầu part 1)**
 - [ ] `docs/POWERBI_QUICKSTART.md` **(NEW)**
 - [ ] `dbt/seeds/dim_date.csv`
 - [ ] `tests/fixtures/mock_prices.csv` + `mock_index.csv`
