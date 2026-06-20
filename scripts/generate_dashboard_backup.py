@@ -26,6 +26,26 @@ def get_db_connection():
 def query_to_dataframe(conn, sql, params=None):
     return pd.read_sql_query(sql, conn, params=params)
 
+def normalize_price(p):
+    """
+    Standardize stock prices to Thousand VND (k VND).
+    - If price > 500, it's in raw VND (from mock provider), divide by 1000 to get k VND.
+    - Otherwise, it's already in k VND (from vnstock), keep it.
+    """
+    if p is None or pd.isna(p):
+        return None
+    return float(p) / 1000.0 if float(p) > 500 else float(p)
+
+def normalize_index(idx):
+    """
+    Standardize indices (VNINDEX, VN30) to raw points.
+    - If index > 5000, it's multiplied by 100 in the mock data, divide by 100.
+    - Otherwise, it's raw points, keep it.
+    """
+    if idx is None or pd.isna(idx):
+        return None
+    return float(idx) / 100.0 if float(idx) > 5000 else float(idx)
+
 def main():
     print("Connecting to database...")
     try:
@@ -59,29 +79,35 @@ def main():
     """
     df_market_history = query_to_dataframe(conn, vnindex_history_sql)
 
-    # 1.3 Top Movers (with percent change)
-    top_movers_sql = """
-        WITH ranked_prices AS (
-            SELECT 
-                symbol, 
-                trade_date, 
-                close_price,
-                LAG(close_price) OVER(PARTITION BY symbol ORDER BY trade_date) as prev_close
-            FROM public_gold.fact_stock_price
-        )
-        SELECT 
-            symbol, 
-            close_price,
-            prev_close,
-            CASE 
-                WHEN prev_close > 0 THEN ROUND(((close_price - prev_close) / prev_close * 100)::numeric, 2)
-                ELSE 0 
-            END as pct_change
-        FROM ranked_prices
-        WHERE trade_date = %s
-        ORDER BY pct_change DESC;
+    # Normalize Index columns in history and latest status
+    df_latest_market['vnindex_close'] = df_latest_market['vnindex_close'].apply(normalize_index)
+    df_latest_market['vn30_close'] = df_latest_market['vn30_close'].apply(normalize_index)
+    
+    df_market_history['vnindex_close'] = df_market_history['vnindex_close'].apply(normalize_index)
+    df_market_history['vn30_close'] = df_market_history['vn30_close'].apply(normalize_index)
+
+    # 1.3 Top Movers (with percent change calculated on normalized prices)
+    # We fetch the entire prices history to compute prev_close and pct_change cleanly in Python
+    all_prices_sql = """
+        SELECT symbol, trade_date, close_price
+        FROM public_gold.fact_stock_price
+        ORDER BY symbol, trade_date ASC;
     """
-    df_top_movers = query_to_dataframe(conn, top_movers_sql, params=(latest_date,))
+    df_all_prices = query_to_dataframe(conn, all_prices_sql)
+    
+    # Normalize price
+    df_all_prices['close_normalized'] = df_all_prices['close_price'].apply(normalize_price)
+    
+    # Calculate previous close and percent change via pandas grouping
+    df_all_prices['prev_close'] = df_all_prices.groupby('symbol')['close_normalized'].shift(1)
+    df_all_prices['pct_change'] = ((df_all_prices['close_normalized'] - df_all_prices['prev_close']) / df_all_prices['prev_close'] * 100)
+    df_all_prices['pct_change'] = df_all_prices['pct_change'].round(2)
+    
+    # Filter for the latest date
+    df_latest_prices = df_all_prices[df_all_prices['trade_date'] == latest_date].copy()
+    
+    # Sort by percent change descending
+    df_top_movers = df_latest_prices.sort_values(by='pct_change', ascending=False)
 
     print("Fetching data for Dashboard 2 (Stock Analysis)...")
     # 2.1 Indicators data for all symbols
@@ -94,6 +120,10 @@ def main():
 
     conn.close()
 
+    # Normalize technical indicator prices (close, ma5, ma20, bb_upper, bb_lower)
+    for col in ['close_price', 'ma5', 'ma20', 'bb_upper', 'bb_lower']:
+        df_indicators[col] = df_indicators[col].apply(normalize_price)
+
     # Pre-process Indicators Data for Javascript (grouped by symbol)
     # Convert dates to string for JSON serialization
     df_indicators['trade_date'] = df_indicators['trade_date'].apply(lambda x: x.strftime('%Y-%m-%d') if isinstance(x, (datetime, pd.Timestamp)) else str(x))
@@ -105,7 +135,7 @@ def main():
         df_sym = df_indicators[df_indicators['symbol'] == sym]
         indicators_by_symbol[sym] = {
             'trade_date': df_sym['trade_date'].tolist(),
-            'close_price': df_sym['close_price'].tolist(),
+            'close_price': df_sym['close_price'].fillna('null').tolist(),
             'ma5': df_sym['ma5'].fillna('null').tolist(),
             'ma20': df_sym['ma20'].fillna('null').tolist(),
             'bb_upper': df_sym['bb_upper'].fillna('null').tolist(),
@@ -117,11 +147,10 @@ def main():
         }
 
     # Generate Mock Fundamentals (Dashboard 4)
-    # We create realistic fundamental data for the 30 symbols
     import random
     random.seed(42) # Consistent mock data
     
-    # Specific realistic values for some notable stocks, others randomized realistically
+    # Specific realistic values for some notable stocks
     notable_fundamentals = {
         'FPT': {'pe': 22.4, 'pb': 5.2, 'roe': 25.6},
         'HPG': {'pe': 14.8, 'pb': 1.8, 'roe': 12.5},
@@ -140,7 +169,6 @@ def main():
         if sym in notable_fundamentals:
             f = notable_fundamentals[sym]
         else:
-            # Generate realistic values
             pe = round(random.uniform(6.5, 26.0), 1)
             pb = round(random.uniform(0.8, 3.5), 1)
             roe = round(random.uniform(8.0, 22.0), 1)
@@ -159,10 +187,15 @@ def main():
     # 1.4 Top Movers parsing
     top_movers_list = []
     for idx, row in df_top_movers.iterrows():
+        # Handle nan values for prev_close
+        prev_close_val = None if pd.isna(row['prev_close']) else float(row['prev_close'])
+        pct_change_val = 0.0 if pd.isna(row['pct_change']) else float(row['pct_change'])
+        
         top_movers_list.append({
-            'symbol': row['symbol'],
-            'close_price': row['close_price'],
-            'pct_change': row['pct_change']
+            'symbol': str(row['symbol']),
+            'close_price': float(row['close_normalized']),
+            'prev_close': prev_close_val,
+            'pct_change': pct_change_val
         })
 
     # Prepare data dict to embed in HTML
@@ -398,12 +431,12 @@ def main():
                         <div class="card-header">Top 10 Cổ Phiếu Biến Động Mạnh Nhất (Top Movers)</div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-custom table-hover align-middle">
+                                <table class="table table-custom table-dark table-hover align-middle">
                                     <thead>
                                         <tr>
                                             <th>Mã Cổ Phiếu</th>
-                                            <th>Giá Đóng Cửa (VND)</th>
-                                            <th>Giá Trước Đó (VND)</th>
+                                            <th>Giá Đóng Cửa (x1000 VND)</th>
+                                            <th>Giá Trước Đó (x1000 VND)</th>
                                             <th>Thay Đổi (%)</th>
                                             <th>Trạng Thái</th>
                                         </tr>
@@ -438,7 +471,7 @@ def main():
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">Biểu Đồ Giá Close & Trung Bình Động (MA5 / MA20)</div>
+                        <div class="card-header">Biểu Đồ Giá Close & Trung Bình Động (MA5 / MA20) - Đơn vị: x1000 VND</div>
                         <div class="card-body">
                             <div id="price-ma-chart" style="height: 400px;"></div>
                         </div>
@@ -450,7 +483,7 @@ def main():
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">Bollinger Bands (BB)</div>
+                        <div class="card-header">Bollinger Bands (BB) - Đơn vị: x1000 VND</div>
                         <div class="card-body">
                             <div id="bollinger-chart" style="height: 350px;"></div>
                         </div>
@@ -554,7 +587,7 @@ def main():
                         <div class="card-header">Bảng Thống Kê Chi Tiết Chỉ Số Cơ Bản (PE / PB / ROE)</div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-custom table-hover align-middle">
+                                <table class="table table-custom table-dark table-hover align-middle">
                                     <thead>
                                         <tr>
                                             <th>Mã Cổ Phiếu</th>
@@ -707,8 +740,8 @@ def main():
                 
                 tr.innerHTML = `
                     <td class="fw-bold text-white">${{item.symbol}}</td>
-                    <td>${{parseFloat(item.close_price).toLocaleString()}}</td>
-                    <td>${{item.prev_close ? parseFloat(item.prev_close).toLocaleString() : '-'}}</td>
+                    <td>${{item.close_price.toFixed(2)}}</td>
+                    <td>${{item.prev_close ? item.prev_close.toFixed(2) : '-'}}</td>
                     <td class="${{colorClass}}">${{sign}}${{item.pct_change}}%</td>
                     <td>${{statusBadge}}</td>
                 `;
@@ -843,7 +876,6 @@ def main():
         }}
 
         function renderMarketTrends() {{
-            // Historical Gainers/Losers
             const traceG = {{
                 x: DATA.market_history.trade_date,
                 y: DATA.market_history.gainers,
@@ -869,7 +901,6 @@ def main():
             layoutTrend.margin.t = 10;
             Plotly.newPlot('gainers-losers-trend', [traceG, traceL], layoutTrend);
 
-            // Historical Volume
             const traceV = {{
                 x: DATA.market_history.trade_date,
                 y: DATA.market_history.total_volume,
