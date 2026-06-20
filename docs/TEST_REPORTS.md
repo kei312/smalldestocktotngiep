@@ -38,6 +38,18 @@
 - Thời gian: 2026-06-19 16:51
 - Trạng thái: ✅ PASS
 
+### [1.3 - Refactored] — Pytest & Verification Ingestion Layer Tái Cấu Trúc
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/pytest tests/test_ingestion.py -v`
+- Kết quả:   `5 passed, 4 warnings in 0.57s`
+- Thời gian: 2026-06-20 19:25
+- Trạng thái: ✅ PASS
+
+### [1.3 - Airflow Task Test] — E2E Verification in Airflow Container
+- Lệnh:      `wsl docker exec airflow-container airflow tasks test daily_stock_pipeline fetch_index 2026-06-18` & `fetch_prices`
+- Kết quả:   `fetch_index` success (6 rows), `fetch_prices` success (90 rows). Dữ liệu được upsert đúng vào Postgres.
+- Thời gian: 2026-06-20 19:30
+- Trạng thái: ✅ PASS
+
 ## Ngày 2 — Backfill + Silver + Gold Indicators
 
 ### [2.2.8 & 2.2.9] — dbt run & test Silver Layer
@@ -122,6 +134,24 @@
 - Hành động: Đã áp dụng quy tắc Fallback trong `AGENTS.md` -> Đổi `PROVIDER=mock` trong file `.env` để sử dụng dữ liệu giả lập tiếp tục luồng.
 - Thời gian: 2026-06-20 12:33
 
+### [3.2.5 - E2E Production Run 1] — Trigger dag_daily daily_stock_pipeline
+- Lệnh:      `wsl docker exec airflow-container airflow dags trigger daily_stock_pipeline`
+- Kết quả:   Chạy thành công toàn bộ E2E: health_check (8.3s) -> fetch_prices (1m51s) & fetch_index (13.7s) -> dbt_run_silver (6.5s) -> dbt_test_silver (5.1s) -> dbt_run_gold (48.7s) -> dbt_test_gold (4.7s) -> notify_success (0.15s). Cả 8 tasks đều SUCCESS.
+- Thời gian: 2026-06-20 19:33 - 19:39 (local time) / 12:33 - 12:39 (UTC)
+- Trạng thái: ✅ PASS
+
+### [3.2.5 - E2E Production Run 2] — Trigger dag_daily daily_stock_pipeline (Idempotency Run)
+- Lệnh:      Trigger lần 2 để kiểm tra tính ổn định và idempotency dưới môi trường Airflow thực tế.
+- Kết quả:   Toàn bộ 8 tasks SUCCESS. Chạy trơn tru và chính xác. Không phát sinh trùng lặp dữ liệu.
+- Thời gian: 2026-06-20 19:39 - 19:42 (local time) / 12:39 - 12:42 (UTC)
+- Trạng thái: ✅ PASS
+
+### [3.3.9] — Generate dashboard_backup.html (Plan B)
+- Lệnh:      `wsl ./venv/bin/python scripts/generate_dashboard_backup.py`
+- Kết quả:   Tạo thành công `reports/dashboard_backup.html` (2.3 MB). Kết nối PostgreSQL Gold schema, truy xuất 4 bảng, gộp data JSON và render 4 Tab đồ thị tương tác bằng Plotly.js thành công.
+- Thời gian: 2026-06-20 20:58
+- Trạng thái: ✅ PASS
+
 ---
 
 ## Fail Log (theo AGENTS.md Section 2.5)
@@ -170,6 +200,13 @@
 
 ### [3.2.5] — Fail attempt (Airflow DAG execution)
 - Lỗi gốc:        `ModuleNotFoundError: No module named 'ingestion'` và `PermissionError: [Errno 13] Permission denied: '/opt/airflow/project/dbt/logs'`
+- Lỗi gốc:        `UndefinedError: 'logical_date' is undefined` tại task `fetch_prices`.
 - Gotcha tra cứu:  không khớp gotcha nào
-- Hành động fix:   Thêm `export PYTHONPATH=/opt/airflow/project` vào BashOperator của Airflow DAG. Cấp quyền read/write cho thư mục `dbt/logs` và `dbt/target` thông qua mount volume hoặc `chmod -R 777 dbt` trên host.
-- Kết quả sau fix: 🔧 FAIL → FIXED (Chạy thành công `dbt build` trong container, records vào đúng schema Silver/Gold)
+- Hành động fix:   Thêm `export PYTHONPATH=/opt/airflow/project` vào BashOperator của Airflow DAG. Cấp quyền read/write cho thư mục `dbt/logs` và `dbt/target` thông qua mount volume hoặc `chmod -R 777 dbt` trên host. Thay thế `logical_date` bằng `{{ ds }}`.
+- Kết quả sau fix: 🔧 FAIL → FIXED (Chạy thành công `dbt build` trong container, records vào đúng schema Silver/Gold)DAG success logged
+
+### [1.3 - Refactored] — Fail attempt (Refactor Ingestion)
+- Lỗi gốc:        `ImportError: cannot import name 'run_index' from 'ingestion.fetch_prices'` khi chạy pytest sau khi tách file.
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Cập nhật `ingestion/__init__.py` để import `run_index` từ `ingestion.fetch_index` thay vì `fetch_prices`.
+- Kết quả sau fix: 🔧 FAIL → FIXED (pytest chạy PASS 5/5 cases)

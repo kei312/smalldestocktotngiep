@@ -196,16 +196,16 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 3.3.0 | [ ] Đọc `docs/POWERBI_QUICKSTART.md` (15 phút) | — (UI) | — | Hiểu rõ 5 bước trước khi mở Power BI |
-| 3.3.1 | [ ] Kết nối Power BI → PostgreSQL Gold | — (UI) | Power BI Desktop | Connection OK (xem mục 1 trong quickstart) |
-| 3.3.2 | [ ] Data model: relationships fact↔dim | — (UI) | Power BI | Star schema trong Model view (xem mục 2 trong quickstart) |
-| 3.3.3 | [ ] **Dashboard 1: Market Overview** | — (UI) | Power BI | VNINDEX line, gainers/losers bar, volume card, top movers table (xem mục 3 trong quickstart) |
-| 3.3.4 | [ ] **Dashboard 2: Stock Analysis (đã đơn giản hoá)** | — (UI) | Power BI | Close+MA line overlay (KHÔNG candlestick), RSI line, MACD line+signal, Bollinger band, symbol slicer (xem mục 4 trong quickstart) |
+| 3.3.0 | [ ] Đọc `docs/POWERBI_QUICKSTART.md` (15 phút) | — (UI) | — | Hiểu rõ các bước chốt cho deadline 20/06 trước khi mở Power BI |
+| 3.3.1 | [ ] Kết nối Power BI → PostgreSQL Gold | — (UI) | Power BI Desktop | Connection OK, chọn Import (an toàn) hoặc DirectQuery (xem mục 1 trong quickstart) |
+| 3.3.2 | [ ] Data model: relationships fact↔dim | — (UI) | Power BI | Star schema (nối dim_stock, dim_date). Mark as date table cho dim_date (xem mục 2 trong quickstart) |
+| 3.3.3 | [ ] **Dashboard 1: Market Overview** | — (UI) | Power BI | Slicer ngày (Single select) dựng trước. Measure DAX (Percent Change, Latest Total Volume). Visuals: VNINDEX line, Gainers/Losers bar (Values: gainers/losers/unchanged, Axis trống, gotcha sum cộng dồn), Volume card (measure), Top Movers table (Top 10 filter, sort Desc) (xem mục 3 trong quickstart) |
+| 3.3.4 | [ ] **Dashboard 2: Stock Analysis (đã đơn giản hoá)** | — (UI) | Power BI | Symbol slicer (single select), Close+MA overlay line chart (close, ma5, ma20), RSI14 line chart (Constant line 30/70), MACD line+signal chart, Bollinger Bands line chart (close, bb_upper, bb_lower) (xem mục 4 trong quickstart) |
 | 3.3.5 | [ ] **📸 Screenshot cả 2 dashboards** | — | Ảnh | — |
 | 3.3.6 | [ ] Lưu `.pbix` | — | `reports/stock_dashboard.pbix` | — |
 | 3.3.7 | [ ] **Commit:** `feat: Power BI dashboards 1+2` | ⚪ Flash | git | — |
 | 3.3.8 | [ ] Cập nhật `STATUS.md` | ⚪ Flash | `STATUS.md` | — |
-| 3.3.9 | [ ] **[Plan B — chỉ làm nếu quá time-box 2h]** Generate `reports/dashboard_backup.html` | 🟢 Pro High | `reports/dashboard_backup.html` | Script Python (psycopg2 + plotly) đọc trực tiếp Gold, xuất HTML tĩnh không cần Power BI. KHÔNG thay thế yêu cầu nộp `.pbix` — chỉ là lưới an toàn demo (xem mục Plan B trong quickstart) |
+| 3.3.9 | [x] **[Plan B — chỉ làm nếu quá time-box 2h]** Generate `reports/dashboard_backup.html` |  ⚪ Flash | `reports/dashboard_backup.html` | Script Python (psycopg2 + plotly) đọc trực tiếp Gold, xuất HTML tĩnh không cần Power BI. KHÔNG thay thế yêu cầu nộp `.pbix` — chỉ là lưới an toàn demo (xem mục Plan B trong quickstart) |
 
 > **⏸ Gate ngày 3:** Airflow E2E thành công (verify qua CLI). 2 dashboards hiển thị đúng (hoặc Plan B nếu quá time-box). Lineage exported.
 
@@ -217,8 +217,8 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 4.1.1 | [ ] **Dashboard 3: Top Movers** | — (UI) | Power BI | Gainers/Losers/Volume tables, time slicer |
-| 4.1.2 | [ ] **Dashboard 4: Fundamentals** (nếu có data) | — (UI) | Power BI | PE/PB/ROE hoặc placeholder |
+| 4.1.1 | [ ] **Dashboard 3: Xu hướng Gainers/Losers theo thời gian** (Định nghĩa lại) | — (UI) | Power BI | Slicer khoảng ngày (Between style). Line/Area chart xem xu hướng gainers vs losers theo ngày (trục trade_date), optional area chart cho total_volume (xem mục 4b trong quickstart) |
+| 4.1.2 | [ ] **Dashboard 4: Fundamentals** (nếu có data) | — (UI) | Power BI | Chỉ làm SAU KHI có fact_fundamentals. Card/Table PE, PB, ROE theo symbol, slicer dùng chung (xem mục 4b trong quickstart) |
 | 4.1.3 | [ ] **📸 Screenshot all dashboards** | — | Ảnh | — |
 | 4.1.4 | [ ] **Commit:** `feat: Power BI dashboards 3+4` | ⚪ Flash | git | — |
 
@@ -226,9 +226,9 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 4.2.1 | [ ] `ingestion/fetch_fundamentals.py` | 🟢 Pro High | `ingestion/fetch_fundamentals.py` | PE/PB/ROE/ROA/EPS theo quý |
-| 4.2.2 | [ ] `dbt/models/gold/fact_fundamentals.sql` | 🟢 Pro High | `dbt/models/gold/fact_fundamentals.sql` | Materialized |
-| 4.2.3 | [ ] Mở rộng universe ngoài VN30 | 🟢 Pro High | Chạy backfill thêm mã | Nhiều mã hơn |
+| 4.2.1 | [ ] `ingestion/fetch_fundamentals.py` | ⚪ Flash | `ingestion/fetch_fundamentals.py` | PE/PB/ROE/ROA/EPS theo quý |
+| 4.2.2 | [ ] `dbt/models/gold/fact_fundamentals.sql` | ⚪ Flash | `dbt/models/gold/fact_fundamentals.sql` | Materialized |
+| 4.2.3 | [ ] Mở rộng universe ngoài VN30 | ⚪ Flash | Chạy backfill thêm mã | Nhiều mã hơn |
 | 4.2.4 | [ ] **Commit:** `feat: fundamentals + expanded universe` | ⚪ Flash | git | — |
 
 ---
