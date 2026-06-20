@@ -228,7 +228,7 @@
 |---|---|---|---|---|
 | 4.2.1 | [ ] `ingestion/fetch_fundamentals.py` | ⚪ Flash | `ingestion/fetch_fundamentals.py` | PE/PB/ROE/ROA/EPS theo quý |
 | 4.2.2 | [ ] `dbt/models/gold/fact_fundamentals.sql` | ⚪ Flash | `dbt/models/gold/fact_fundamentals.sql` | Materialized |
-| 4.2.3 | [ ] Mở rộng universe ngoài VN30 | ⚪ Flash | Chạy backfill thêm mã | Nhiều mã hơn |
+| 4.2.3 | [x] Kế hoạch mở rộng HoSE (~400 mã) | 🟢 Pro High | docs/HOSE_SCALING_PLAN.md | Viết tài liệu kế hoạch mở rộng hệ thống |
 | 4.2.4 | [ ] **Commit:** `feat: fundamentals + expanded universe` | ⚪ Flash | git | — |
 
 ---
@@ -237,16 +237,16 @@
 
 | # | Task | Model | File | Acceptance |
 |---|---|---|---|---|
-| 4.3.1 | [ ] `docs/CONTEXT.md` — copy vào repo | 🟢 Pro High | `docs/CONTEXT.md` | Copy từ artifact đã tạo (v2), review + chỉnh nếu cần |
-| 4.3.2 | [ ] `docs/PROJECT_RULES.md` — copy vào repo | 🟢 Pro High | `docs/PROJECT_RULES.md` | Copy từ artifact đã tạo, review + chỉnh nếu cần |
-| 4.3.3 | [ ] `docs/DATA_CONTRACTS.md` | 🟢 Pro High | `docs/DATA_CONTRACTS.md` | Mở rộng từ PROJECT_RULES section 5 |
-| 4.3.4 | [ ] `docs/ADR/ADR-001-postgres.md` | 🟢 Pro High | `docs/ADR/ADR-001-postgres.md` | Context, Decision, Consequences |
-| 4.3.5 | [ ] `docs/ADR/ADR-002-dbt.md` | 🟢 Pro High | `docs/ADR/ADR-002-dbt.md` | Tại sao 1.10 không 2.0 |
-| 4.3.6 | [ ] `docs/ADR/ADR-003-provider.md` | 🟢 Pro High | `docs/ADR/ADR-003-provider.md` | 1 VnstockProvider thay 4 |
-| 4.3.6b | [ ] `docs/ADR/ADR-004-macd-signal.md` **(NEW)** | 🟢 Pro High | `docs/ADR/ADR-004-macd-signal.md` | Context: SMA approximation rủi ro fail G-03. Decision: EMA9 thật qua int_macd_line/int_macd_signal + macro generalized. Consequences: thêm 2 model nhỏ, đổi lại độ chính xác đúng định nghĩa chuẩn |
-| 4.3.7 | [ ] `README.md` — setup guide | 🟢 Pro High | `README.md` | Clone → .env → docker up → init → backfill → dbt → Power BI (link tới docs/POWERBI_QUICKSTART.md) |
-| 4.3.8 | [ ] `STATUS.md` hoàn chỉnh | 🟢 Pro High | `STATUS.md` | All tasks done, format đẹp |
-| 4.3.9 | [ ] **Commit:** `docs: ADRs + data contracts + README` | ⚪ Flash | git | — |
+| 4.3.1 | [x] `docs/CONTEXT.md` — copy vào repo | 🟢 Pro High | `docs/CONTEXT.md` | Copy từ artifact đã tạo (v2), review + chỉnh nếu cần |
+| 4.3.2 | [x] `docs/PROJECT_RULES.md` — copy vào repo | 🟢 Pro High | `docs/PROJECT_RULES.md` | Copy từ artifact đã tạo, review + chỉnh nếu cần |
+| 4.3.3 | [x] `docs/DATA_CONTRACTS.md` | 🟢 Pro High | `docs/DATA_CONTRACTS.md` | Mở rộng từ PROJECT_RULES section 5 |
+| 4.3.4 | [x] `docs/ADR/ADR-001-postgres.md` | 🟢 Pro High | `docs/ADR/ADR-001-postgres.md` | Context, Decision, Consequences |
+| 4.3.5 | [x] `docs/ADR/ADR-002-dbt.md` | 🟢 Pro High | `docs/ADR/ADR-002-dbt.md` | Tại sao 1.10 không 2.0 |
+| 4.3.6 | [x] `docs/ADR/ADR-003-provider.md` | 🟢 Pro High | `docs/ADR/ADR-003-provider.md` | 1 VnstockProvider thay 4 |
+| 4.3.6b | [x] `docs/ADR/ADR-004-macd-signal.md` **(NEW)** | 🟢 Pro High | `docs/ADR/ADR-004-macd-signal.md` | Context: SMA approximation rủi ro fail G-03. Decision: EMA9 thật qua int_macd_line/int_macd_signal + macro generalized. Consequences: thêm 2 model nhỏ, đổi lại độ chính xác đúng định nghĩa chuẩn |
+| 4.3.7 | [x] `README.md` — setup guide | 🟢 Pro High | `README.md` | Clone → .env → docker up → init → backfill → dbt → Power BI (link tới docs/POWERBI_QUICKSTART.md) |
+| 4.3.8 | [x] `STATUS.md` hoàn chỉnh | 🟢 Pro High | `STATUS.md` | All tasks done, format đẹp |
+| 4.3.9 | [x] **Commit:** `docs: ADRs + data contracts + README` | ⚪ Flash | git | — |
 
 ---
 

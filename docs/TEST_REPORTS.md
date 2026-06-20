@@ -210,3 +210,37 @@
 - Gotcha tra cứu:  không khớp gotcha nào
 - Hành động fix:   Cập nhật `ingestion/__init__.py` để import `run_index` từ `ingestion.fetch_index` thay vì `fetch_prices`.
 - Kết quả sau fix: 🔧 FAIL → FIXED (pytest chạy PASS 5/5 cases)
+
+### [Backfill Optimization] — Pytest Ingestion & Providers
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/pytest tests/`
+- Kết quả:   `10 passed, 4 warnings in 5.84s`
+- Thời gian: 2026-06-20 21:44
+- Trạng thái: 🔧 FAIL → FIXED (lần 2 pass sau khi sửa test registry)
+
+### [Backfill Optimization] — Fail attempt (Test registry failure)
+- Lỗi gốc:        `AssertionError: assert False where False = isinstance(<VnstockProvider object>, MockProvider)` tại `test_registry_returns_correct_provider` do `config.provider` không cập nhật theo `os.environ` ở runtime (singleton config).
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Cập nhật `tests/test_providers.py` sử dụng `unittest.mock.patch.object` để patch `config.provider` thay vì sửa `os.environ` trực tiếp.
+- Kết quả sau fix: 🔧 FAIL → FIXED (pytest chạy PASS 10/10 cases)
+
+### [Backfill Optimization - 1 Request 1 Symbol Full Range] — Pytest Ingestion & Providers
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/pytest tests/`
+- Kết quả:   `10 passed, 4 warnings in 6.27s`
+- Thời gian: 2026-06-20 21:47
+- Trạng thái: ✅ PASS
+
+### [Backfill Optimization - Rely on Provider Sleep] — Pytest Ingestion & Providers
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/pytest tests/`
+- Kết quả:   `10 passed, 4 warnings in 7.84s`
+- Thời gian: 2026-06-20 21:57
+- Trạng thái: ✅ PASS
+
+### [Backfill Optimization - Business Days Skip Check Fix] — Pytest Ingestion & Providers
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/pytest tests/`
+- Kết quả:   `10 passed, 4 warnings in 5.75s`
+- Thời gian: 2026-06-20 22:04
+- Trạng thái: ✅ PASS
+
+
+
+
