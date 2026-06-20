@@ -19,14 +19,22 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_HOST: db
+      # --- Airflow internal ---
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USER:-airflow}:${DB_PASS:-airflow}@db:5432/${DB_NAME:-stock_db}
-      _PIP_ADDITIONAL_REQUIREMENTS: vnstock requests pandas psycopg2-binary
+      _PIP_ADDITIONAL_REQUIREMENTS: vnstock requests pandas psycopg2-binary dbt-core==1.10.22 dbt-postgres==1.10.0 python-dotenv
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: admin
       _AIRFLOW_WWW_USER_PASSWORD: admin
+      # --- App env vars (used by ingestion & dbt inside container) ---
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-stock_db}
+      DB_USER: ${DB_USER:-airflow}
+      DB_PASS: ${DB_PASS:-airflow}
+      PROVIDER: ${PROVIDER:-vnstock}
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./:/opt/airflow/project
     depends_on:
       - db
     networks:
@@ -39,3 +47,4 @@ networks:
 
 volumes:
   pgdata:
+

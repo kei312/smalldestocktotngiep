@@ -85,11 +85,25 @@
 
 ## Ngày 3 — Airflow + Power BI
 
-_(chưa có entry)_
+### [3.1.4] — dbt seed (dim_date)
+- Lệnh:      `dbt seed`
+- Kết quả:   `PASS=1`. Đã load thành công 2557 rows vào `public.dim_date`.
+- Thời gian: 2026-06-19 18:37
+- Trạng thái: ✅ PASS
+
+### [3.1.6] — dbt run & dbt test toàn bộ
+- Lệnh:      `dbt run && dbt test`
+- Kết quả:   `dbt run`: PASS=11 models. `dbt test`: PASS=12 tests (bao gồm test G-04 `gainers+losers+unchanged=total_symbols` cho `fact_market_summary`).
+- Thời gian: 2026-06-19 18:39
+- Trạng thái: ✅ PASS
 
 ## Ngày 4 — Hoàn thiện + Docs + Báo cáo
 
-_(chưa có entry)_
+### [3.2.1 & 3.2.2] — Airflow DAG Parsing
+- Lệnh:      `python3 check_syntax.py` & `docker exec airflow-container airflow dags list`
+- Kết quả:   `[OK] dag_daily.py syntax valid`. Airflow UI parse thành công `daily_stock_pipeline` và `manual_backfill_pipeline` không lỗi.
+- Thời gian: 2026-06-20 11:51
+- Trạng thái: ✅ PASS
 
 ---
 
@@ -124,3 +138,15 @@ _(chưa có entry)_
 - Gotcha tra cứu:  không khớp gotcha nào
 - Hành động fix:   Cast biểu thức về `::NUMERIC` trước khi gọi hàm `ROUND()` trong PostgreSQL.
 - Kết quả sau fix: 🔧 FAIL → FIXED (build thành công model `int_rsi14` với 330 rows)
+
+### [3.1.4] — Fail attempt
+- Lỗi gốc:        `OSError: Cannot save file into a non-existent directory: 'dbt/seeds'` (python script sinh dim_date.csv)
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Sửa script python đổi đường dẫn lưu file thành đường dẫn tương đối `seeds/dim_date.csv` vì bash đang gọi trong cwd=dbt.
+- Kết quả sau fix: 🔧 FAIL → FIXED (sinh file `dim_date.csv` thành công và `dbt seed` load PASS 2557 rows)
+
+### [3.2.1] — Fail attempt
+- Lỗi gốc:        `Core: - installed: 2.0.0a2` (Lệch version dbt-core cài tự động trong Docker so với Host).
+- Gotcha tra cứu:  không khớp gotcha nào
+- Hành động fix:   Cập nhật `docker-compose.yml`, pin chặt `dbt-core==1.10.22` cùng với `dbt-postgres==1.10.0`.
+- Kết quả sau fix: 🔧 FAIL → FIXED (Recreate container cài đúng bản `1.10.22`)
