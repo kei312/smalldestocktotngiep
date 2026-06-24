@@ -6,3 +6,5 @@ sources:
     tables:
       - name: bronze_prices
       - name: bronze_index
+      - name: bronze_vn30_components
+

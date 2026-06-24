@@ -8,7 +8,7 @@
     Combines: MA5, MA20, Bollinger Bands (window functions)
               RSI14, MACD line/signal/histogram (from intermediate models)
 
-    Incremental strategy: delete+insert with 60-day lookback
+    Incremental strategy: delete+insert with 120-day lookback
     to ensure warm-up coverage for MACD Signal (needs 34 trading days).
 
     Optimization: single scan of fact_stock_price for all window-based
@@ -25,7 +25,7 @@ source AS (
     FROM {{ ref('fact_stock_price') }}
 
     {% if is_incremental() %}
-    WHERE trade_date > (SELECT MAX(trade_date) - INTERVAL '60 days' FROM {{ this }})
+    WHERE trade_date > (SELECT MAX(trade_date) - INTERVAL '120 days' FROM {{ this }})
     {% endif %}
 ),
 
@@ -93,7 +93,7 @@ rsi AS (
     FROM {{ ref('int_rsi14') }}
 
     {% if is_incremental() %}
-    WHERE trade_date > (SELECT MAX(trade_date) - INTERVAL '60 days' FROM {{ this }})
+    WHERE trade_date > (SELECT MAX(trade_date) - INTERVAL '120 days' FROM {{ this }})
     {% endif %}
 ),
 
@@ -110,7 +110,7 @@ macd_full AS (
         ON ml.symbol = ms.symbol AND ml.trade_date = ms.trade_date
 
     {% if is_incremental() %}
-    WHERE ml.trade_date > (SELECT MAX(trade_date) - INTERVAL '60 days' FROM {{ this }})
+    WHERE ml.trade_date > (SELECT MAX(trade_date) - INTERVAL '120 days' FROM {{ this }})
     {% endif %}
 )
 

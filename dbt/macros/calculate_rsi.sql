@@ -1,35 +1,15 @@
 {% macro calculate_rsi(period) %}
 
 WITH RECURSIVE
-_rsi_base AS (
-    SELECT
-        symbol,
-        trade_date,
-        close_price - LAG(close_price) OVER (PARTITION BY symbol ORDER BY trade_date)  AS daily_change,
-        ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY trade_date)                     AS rn
-    FROM {{ ref('fact_stock_price') }}
-),
-
-_rsi_gl AS (
-    SELECT
-        symbol,
-        trade_date,
-        rn,
-        GREATEST(COALESCE(daily_change, 0), 0)       AS gain,
-        ABS(LEAST(COALESCE(daily_change, 0),    0))   AS loss
-    FROM _rsi_base
-),
-
--- SMA seed at row (period+1): uses period changes (rows 2..period+1)
--- rn=1 has no change (LAG is NULL), so changes start from rn=2
+-- Seed SMA calculation using pre-calculated row_num, gain, and loss (indexed)
 _rsi_seed AS (
     SELECT
         symbol,
         {{ period }} + 1          AS rn,
         AVG(gain)                 AS avg_gain,
         AVG(loss)                 AS avg_loss
-    FROM _rsi_gl
-    WHERE rn BETWEEN 2 AND {{ period }} + 1
+    FROM {{ ref('fact_stock_price') }}
+    WHERE row_num BETWEEN 2 AND {{ period }} + 1
     GROUP BY symbol
 ),
 
@@ -38,21 +18,22 @@ _rsi_seed AS (
 _rsi_rec(symbol, rn, trade_date, avg_gain, avg_loss) AS (
 
     -- Base case: seed at row = period+1 (row 15 when period=14)
-    SELECT gl.symbol, gl.rn, gl.trade_date, s.avg_gain, s.avg_loss
-    FROM _rsi_gl gl
-    JOIN _rsi_seed s ON gl.symbol = s.symbol AND gl.rn = s.rn
+    SELECT b.symbol, b.row_num, b.trade_date, s.avg_gain, s.avg_loss
+    FROM {{ ref('fact_stock_price') }} b
+    JOIN _rsi_seed s ON b.symbol = s.symbol AND b.row_num = s.rn
 
     UNION ALL
 
     -- Recursive step: Wilder — α = 1/period
+    -- Joins with the physical index on (symbol, row_num)
     SELECT
-        gl.symbol,
-        gl.rn,
-        gl.trade_date,
-        (r.avg_gain * ({{ period }} - 1) + gl.gain) / {{ period }}::DOUBLE PRECISION,
-        (r.avg_loss * ({{ period }} - 1) + gl.loss) / {{ period }}::DOUBLE PRECISION
-    FROM _rsi_gl gl
-    JOIN _rsi_rec r ON gl.symbol = r.symbol AND gl.rn = r.rn + 1
+        b.symbol,
+        b.row_num,
+        b.trade_date,
+        (r.avg_gain * ({{ period }} - 1) + b.gain) / {{ period }}::DOUBLE PRECISION,
+        (r.avg_loss * ({{ period }} - 1) + b.loss) / {{ period }}::DOUBLE PRECISION
+    FROM {{ ref('fact_stock_price') }} b
+    JOIN _rsi_rec r ON b.symbol = r.symbol AND b.row_num = r.rn + 1
 )
 
 SELECT
