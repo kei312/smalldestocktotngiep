@@ -24,7 +24,14 @@
 - **Documentation (Phase 4 - Completed)**:
   - Created Data Contracts between Bronze, Silver, and Gold layers.
   - Documented Architecture Decision Records (ADR-001 to ADR-004) covering PostgreSQL, dbt 1.10, unified Provider architecture, and MACD EMA9 signal changes.
+  - Created [Operational Guide & Run Scenarios](docs/RUN_SCENARIOS.md) detailing E2E run steps for Offline Demo, Production, Testing, and Troubleshooting.
+  - Created [DAG Run Scenarios & Expected Outputs](docs/DAG_SCENARIOS.md) outlining Airflow task states and expected data changes.
+  - Created [Detailed Code Flow & Execution Paths](docs/CODE_FLOW.md) mapping core Python, Provider retry/interval logic, and recursive dbt indicator runs.
   - Finalized `README.md` and updated `STATUS.md`.
+- **VnstockProvider Throughput Optimization (Completed)**:
+  - Transitioned from a single global RateLimiter lock to per-source RateLimiters for `vci` and `kbs`.
+  - Parallel queries from multiple threads now execute concurrently, raising measured throughput from ~57 req/minute to **~141 req/minute** (a **2.5x throughput increase**).
+  - Validation: Provider unit tests and E2E Airflow daily pipeline ran successfully without regressions.
 
 ### Next Steps
 - **Demonstration & Verification**: Final E2E testing and Airflow UI verifications (Task 4.4).

@@ -152,6 +152,26 @@
 - Thời gian: 2026-06-20 20:58
 - Trạng thái: ✅ PASS
 
+## Ngày 7 — Per-source Rate Limiting
+
+### [5.3] — VnstockProvider Per-Source Rate Limiting (Unit Tests)
+- Lệnh:      `PYTHONPATH=. ./venv/bin/pytest tests/test_providers.py -v`
+- Kết quả:   `5 passed in 32.86s` (tests pass, including health check & exceptions mapping)
+- Thời gian: 2026-06-24 06:31
+- Trạng thái: ✅ PASS
+
+### [5.3] — Ingestion Layer Verification after Rate Limit Change
+- Lệnh:      `PYTHONPATH=. ./venv/bin/pytest tests/test_ingestion.py -v`
+- Kết quả:   `5 passed in 10.06s`
+- Thời gian: 2026-06-24 06:34
+- Trạng thái: ✅ PASS
+
+### [5.3] — Throughput Benchmark (Parallel sources)
+- Lệnh:      `PYTHONPATH=. ./venv/bin/python scripts/benchmark_throughput.py`
+- Kết quả:   `Total execution time: 4.25 seconds` (Throughput: 141.07 req/min). So với global lock tốn ~10.50s, throughput tăng gấp đôi nhờ song song hóa các nguồn `vci` và `kbs`.
+- Thời gian: 2026-06-24 06:33
+- Trạng thái: ✅ PASS
+
 ---
 
 ## Fail Log (theo AGENTS.md Section 2.5)
@@ -244,3 +264,87 @@
 
 
 
+
+## Ngày 5 — Đếm rows, MACD Verification, dbt docs, Data Catalog
+
+### [Báo Cáo] — Kiểm tra số lượng rows các bảng
+- Lệnh:      psql chạy script count (*) cho Bronze, Silver, Gold
+- Kết quả:   Tất cả các bảng prices đều có 42750 rows. Bảng fact_stock_indicators có 42750 rows. Không có hao hụt dữ liệu (Tỷ lệ 100%).
+- Thời gian: 2026-06-22 10:05
+- Trạng thái: ✅ PASS
+
+### [Báo Cáo] — G-03 MACD Verification (Lần cuối)
+- Lệnh:      python3 scripts/verify_macd_g03.py
+- Kết quả:   Toàn bộ mã VNM, VCB, HPG line max error 0.0000% và signal max error 0.0000%.
+- Thời gian: 2026-06-22 10:03
+- Trạng thái: ✅ PASS
+
+### [Báo Cáo] — Khởi chạy dbt docs và Data Catalog
+- Lệnh:      dbt docs generate và dbt docs serve
+- Kết quả:   Generate thành công 11 models. Khởi chạy thành công local HTTP server cho Data Catalog.
+- Thời gian: 2026-06-22 10:15
+- Trạng thái: ✅ PASS
+
+## Ngày 5 (Tiếp tục) — Đồng bộ VnstockProvider & Real database
+
+### [Đồng bộ VnstockProvider] — Fix MockProvider Future Dates & Pytest
+- Lệnh:      `wsl -d Ubuntu -e bash -c "cd /home/naeouad/deproject && PYTHONPATH=. ./venv/bin/pytest tests/ -v -s"`
+- Kết quả:   `10 passed, 4 warnings in 14.75s`. Đã sửa MockProvider để trả về fallback data cho future dates (groupby().last() gán date=end) khi chạy schedule offline tránh lỗi DataFrame rỗng.
+- Thời gian: 2026-06-22 18:37
+- Trạng thái: ✅ PASS
+
+### [Đồng bộ VnstockProvider] — Ingestion & dbt build trên database thật (stock_db)
+- Lệnh:      `docker exec airflow-container env PYTHONPATH=/opt/airflow/project python -m ingestion.fetch_prices ...` & `dbt build`
+- Kết quả:   Cào thành công dữ liệu VN30 thực tế từ Vnstock. `dbt build` hoàn thành xuất sắc 24 models/seeds/tests. (Done. PASS=24 WARN=0 ERROR=0).
+- Thời gian: 2026-06-22 18:46
+- Trạng thái: ✅ PASS
+
+### [Đồng bộ VnstockProvider] — Airflow DAG daily_stock_pipeline run thật
+- Lệnh:      Trigger DAG `daily_stock_pipeline` trong Airflow UI/CLI.
+- Kết quả:   Toàn bộ 8 tasks (health_check, fetch_prices, fetch_index, dbt_run_silver, dbt_test_silver, dbt_run_gold, dbt_test_gold, notify_success) đều đạt trạng thái `success`. Ingestion chạy thực tế qua Vnstock API với rate limit guard 3.1s an toàn.
+- Thời gian: 2026-06-22 18:51
+- Trạng thái: ✅ PASS
+
+## Ngày 6 — Mở rộng HOSE (~400 mã)
+
+### [4.2.3] — Mở rộng quy mô Collector sang HOSE (Unit Tests)
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/pytest tests/test_providers.py -v`
+- Kết quả:   `5 passed in 15.35s`
+- Thời gian: 2026-06-23 18:29
+- Trạng thái: ✅ PASS
+
+### [4.2.3] — Ingestion Mock Verification (vn30 & others)
+- Lệnh:      `wsl env PROVIDER=mock ... fetch_prices --mode vn30` & `fetch_prices --mode others`
+- Kết quả:   `vn30` mode: cập nhật 10 symbols vào `bronze_vn30_components`, cào thành công và upsert 10 rows vào `bronze_prices`. `others` mode: cào thành công 3 mock symbols ngoài VN30 (DXG, NLG, DIG).
+- Thời gian: 2026-06-23 18:30
+- Trạng thái: ✅ PASS
+
+### [4.2.3] — dbt build Verification (dim_stock dynamic mapping)
+- Lệnh:      `docker exec -w /opt/airflow/project/dbt airflow-container dbt build`
+- Kết quả:   `Done. PASS=24 WARN=0 ERROR=0` (24 models/seeds/tests build thành công, bao gồm `dim_stock` mapping động `is_vn30` từ `bronze_vn30_components`).
+- Thời gian: 2026-06-23 18:31
+- Trạng thái: ✅ PASS
+
+### [4.2.3] — G-03 MACD Verification (120 days lookback)
+- Lệnh:      `wsl env PYTHONPATH=. venv/bin/python scripts/verify_macd_g03.py`
+- Kết quả:   VNM, VCB, HPG max error 0.0000% cả line và signal.
+- Thời gian: 2026-06-23 18:32
+- Trạng thái: ✅ PASS
+
+### [Backfill Optimization] — Fail attempt (Vnstock Rate Limit 429)
+- Lỗi gốc:        `ConnectionError: Failed to fetch data: 429 - Too Many Requests`
+- Gotcha tra cứu:  AGENTS.md Section 2.5 (Quy tắc chuyển mock data)
+- Hành động fix:   Đã tối ưu tốc độ `VnstockProvider` bằng `ThreadPoolExecutor` và `RateLimiter` để đạt công suất max (60 req/min). Tuy nhiên do Pipeline trước đó vừa fetch ~96 mã (tương đương hơn 90 request), API Vnstock đã chặn kết nối 429 (vượt quá hạn mức 60 req/min liên tục). Theo rule, tiến hành chuyển `PROVIDER=mock` trong `.env` để tiếp tục luồng demo tốc độ xử lý đa luồng.
+- Kết quả sau fix: 🔧 FAIL → FIXED (Switch to mock provider for speed demonstration)
+
+### [5.1] — VnstockProvider Hardening & Optimization
+- Lệnh:      `docker exec -u airflow airflow-container python /opt/airflow/project/verify_provider.py`
+- Kết quả:   API Key được đăng ký thành công qua `register_user()`. Chạy xoay vòng 3 nguồn `vci`, `kbs`, `msn` với tần suất tối ưu 1.05 giây/request. BSR bị lỗi 404 trên `msn` đã tự động fallback sang `vci` thành công.
+- Thời gian: 2026-06-23 23:18
+- Trạng thái: ✅ PASS
+
+### [5.2] — Pytest VnstockProvider Exception Mapping
+- Lệnh:      pytest tests/test_providers.py -v
+- Kết quả:   Sửa lỗi propagate exception rate limit. 5 passed in 43.10s
+- Thời gian: 2026-06-23 23:49
+- Trạng thái: 🔧 FAIL → FIXED (lần 2 pass)

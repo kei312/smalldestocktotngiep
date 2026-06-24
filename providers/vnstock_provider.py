@@ -1,20 +1,23 @@
 """
 VnstockProvider — wraps vnstock 4.x to conform to the DataProvider interface.
 
-vnstock 4.x handles source fallback (VCI → TCBS → MSN) internally,
-so this provider does NOT need to implement multi-source logic.
+Implements multi-source rotation and sequential fallback across available
+Vietnamese stock quote sources (vci, kbs, msn) to maximize throughput while
+respecting API rate limits.
 """
 
 import logging
 import time
+import os
+import threading
 from datetime import date
 from typing import List
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
-
-# vnstock Guest limit: 20 req/min → 1 req per 3s minimum.
-# We use 3.1s to have a small buffer (≈19.4 req/min effective rate).
-_REQUEST_INTERVAL_SECONDS = 3.1
+from vnstock import Quote, register_user
+from vnstock.api.listing import Listing
+from vnstock.config import Config
 
 from .base import (
     DataProvider,
@@ -32,9 +35,88 @@ _EXPECTED_COLUMNS = {"time", "open", "high", "low", "close", "volume"}
 # Source tag written into the ``source`` column for audit trail
 _SOURCE_TAG = "vnstock"
 
+# Optimized global rate limit: 60 requests/minute is 1.0s. 
+# We use 1.05s per request for safety margin.
+_REQUEST_INTERVAL_SECONDS = 1.05
+
+# Supported stock sources for history quotes in vnstock 4.x
+_SOURCES = ["vci", "kbs"] #, "msn"
+_source_index = 0
+_source_lock = threading.Lock()
+
+def _get_next_source() -> str:
+    """Thread-safe round-robin source rotation."""
+    global _source_index
+    with _source_lock:
+        src = _SOURCES[_source_index % len(_SOURCES)]
+        _source_index += 1
+        return src
+
+
+class RateLimiter:
+    def __init__(self, interval: float):
+        self.interval = interval
+        self.lock = threading.Lock()
+        self.last_called = 0.0
+
+    def wait(self):
+        with self.lock:
+            now = time.monotonic()
+            elapsed = now - self.last_called
+            if elapsed < self.interval:
+                time.sleep(self.interval - elapsed)
+            self.last_called = time.monotonic()
+
 
 class VnstockProvider(DataProvider):
     """Concrete provider backed by the vnstock 4.x library."""
+
+    def __init__(self):
+        self._rate_limiters = {
+            src: RateLimiter(_REQUEST_INTERVAL_SECONDS) for src in _SOURCES
+        }
+        
+        # Thread-safe global pause event for rate-limiting
+        self._pause_event = threading.Event()
+        self._pause_event.set()  # Unpaused initially
+        self._pause_lock = threading.Lock()
+
+        # Enforce global network connection timeout
+        Config.REQUEST_TIMEOUT = 15
+
+        # Read API key if configured
+        api_key = os.environ.get("VNSTOCK_API_KEY")
+        if api_key:
+            try:
+                success = register_user(api_key)
+                if success:
+                    logger.info("vnstock user registered successfully with API key from environment")
+                else:
+                    logger.warning("vnstock register_user returned False")
+            except Exception as e:
+                logger.warning("Failed to register vnstock user API key: %s", str(e))
+
+    def _get_rate_limiter(self, source: str) -> RateLimiter:
+        """Get the rate limiter for a specific source (case-insensitive)."""
+        src_lower = source.lower()
+        if src_lower in self._rate_limiters:
+            return self._rate_limiters[src_lower]
+        # Fallback to the first available source rate limiter
+        return self._rate_limiters[_SOURCES[0]]
+
+    def _wait_if_paused(self):
+        """Block if we are currently in a rate limit cooldown pause."""
+        self._pause_event.wait()
+
+    def _trigger_pause(self, seconds: float):
+        """Pause all provider threads by clearing the event and sleeping."""
+        with self._pause_lock:
+            if self._pause_event.is_set():
+                self._pause_event.clear()
+                logger.warning("Rate limit hit! Pausing all provider threads for %.1f seconds...", seconds)
+                time.sleep(seconds)
+                self._pause_event.set()
+                logger.info("Provider threads resumed.")
 
     # ------------------------------------------------------------------
     # Public interface (DataProvider contract)
@@ -48,10 +130,26 @@ class VnstockProvider(DataProvider):
     ) -> pd.DataFrame:
         """Fetch OHLCV for stock symbols via vnstock Quote.history()."""
         frames: List[pd.DataFrame] = []
-        for symbol in symbols:
-            df = self._fetch_history(symbol, start, end)
-            if df is not None and not df.empty:
-                frames.append(df)
+        errors = []
+        
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(self._fetch_history, sym, start, end): sym for sym in symbols}
+            for future in as_completed(futures):
+                sym = futures[future]
+                try:
+                    df = future.result(timeout=60)
+                    if df is not None and not df.empty:
+                        frames.append(df)
+                except Exception as e:
+                    logger.error("Failed to fetch prices for %s: %s", sym, str(e))
+                    errors.append((sym, e))
+                    
+        # If all symbols failed and we got errors, propagate the first error
+        if not frames and errors:
+            raise errors[0][1]
+        elif errors:
+            logger.warning("Fetched prices with partial errors. Failed symbols: %s", [sym for sym, _ in errors])
+
         if not frames:
             logger.warning("No data returned for symbols=%s", symbols)
             return pd.DataFrame()
@@ -65,10 +163,26 @@ class VnstockProvider(DataProvider):
     ) -> pd.DataFrame:
         """Fetch OHLCV for market indices (VNINDEX, VN30)."""
         frames: List[pd.DataFrame] = []
-        for index_code in indices:
-            df = self._fetch_history(index_code, start, end)
-            if df is not None and not df.empty:
-                frames.append(df)
+        errors = []
+        
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {executor.submit(self._fetch_history, idx_code, start, end): idx_code for idx_code in indices}
+            for future in as_completed(futures):
+                idx_code = futures[future]
+                try:
+                    df = future.result(timeout=60)
+                    if df is not None and not df.empty:
+                        frames.append(df)
+                except Exception as e:
+                    logger.error("Failed to fetch index for %s: %s", idx_code, str(e))
+                    errors.append((idx_code, e))
+
+        # If all indices failed and we got errors, propagate the first error
+        if not frames and errors:
+            raise errors[0][1]
+        elif errors:
+            logger.warning("Fetched indices with partial errors. Failed: %s", [idx for idx, _ in errors])
+
         if not frames:
             logger.warning("No data returned for indices=%s", indices)
             return pd.DataFrame()
@@ -77,9 +191,9 @@ class VnstockProvider(DataProvider):
     def health_check(self) -> bool:
         """Quick connectivity test: fetch 1 day of VNM data."""
         try:
-            from vnstock import Quote
-
-            quote = Quote(symbol="VNM", source="VCI")
+            self._wait_if_paused()
+            self._get_rate_limiter("vci").wait()
+            quote = Quote(symbol="VNM", source="vci")
             df = quote.history(
                 start="2024-01-02",
                 end="2024-01-03",
@@ -104,59 +218,74 @@ class VnstockProvider(DataProvider):
     ) -> pd.DataFrame:
         """Call vnstock and normalise the result to Bronze-compatible schema.
 
-        Maps vnstock exceptions into our provider exception hierarchy so
-        that the ingestion layer's retry decorator works uniformly.
+        Rotates sources and implements active fallback. Maps vnstock exceptions.
         """
-        try:
-            from vnstock import Quote
+        sources = list(_SOURCES)
+        start_src = _get_next_source()
+        
+        # Re-order to try start_src first
+        sources.remove(start_src)
+        sources.insert(0, start_src)
 
-            quote = Quote(symbol=symbol, source="VCI")
-            df = quote.history(
-                start=start.strftime("%Y-%m-%d"),
-                end=end.strftime("%Y-%m-%d"),
-                interval="1D",
-            )
+        last_error = None
+        for src in sources:
+            try:
+                # Block if currently paused
+                self._wait_if_paused()
+                
+                # Enforce rate limiting
+                self._get_rate_limiter(src).wait()
 
-            # Proactive rate-limit guard: sleep AFTER every API call so we
-            # never exceed 20 req/min regardless of how many symbols are batched.
-            time.sleep(_REQUEST_INTERVAL_SECONDS)
+                logger.debug("Fetching %s from %s", symbol, src)
+                quote = Quote(symbol=symbol, source=src)
+                df = quote.history(
+                    start=start.strftime("%Y-%m-%d"),
+                    end=end.strftime("%Y-%m-%d"),
+                    interval="1D",
+                )
 
-            if df is None or df.empty:
-                logger.info("Empty response for %s (%s → %s)", symbol, start, end)
-                return pd.DataFrame()
+                if df is None or df.empty:
+                    logger.info("Empty response for %s from %s (%s → %s)", symbol, src, start, end)
+                    # We treat empty as a valid response (no need to fallback to other sources)
+                    return pd.DataFrame()
 
-            self._validate_schema(df, symbol)
-            df = self._normalise(df, symbol)
-            logger.info("Fetched %d rows for %s", len(df), symbol)
-            return df
+                self._validate_schema(df, symbol)
+                df = self._normalise(df, symbol, src)
+                logger.info("Fetched %d rows for %s from %s", len(df), symbol, src)
+                return df
 
-        except ProviderError:
-            # Already mapped — re-raise as-is
-            raise
-        except SystemExit as e:
-            # Safety net: vnstock calls sys.exit() on rate-limit instead of
-            # raising a normal exception.  The proactive sleep above should
-            # prevent this, but if it still fires we wait for the full 1-min
-            # window to reset before re-raising for @retry to handle.
-            logger.warning(
-                "Rate limit still hit for %s despite proactive sleep — "
-                "sleeping 62s for rate-limit window to reset", symbol
-            )
-            time.sleep(62)
-            raise ProviderRateLimitError(f"vnstock rate limit (sys.exit) for {symbol}") from e
-        except ConnectionError as e:
-            logger.error("Timeout / connection error for %s: %s", symbol, str(e))
-            raise ProviderTimeoutError(str(e)) from e
-        except Exception as e:
-            error_msg = str(e).lower()
-            if "429" in error_msg or "rate" in error_msg or "limit" in error_msg:
-                logger.warning("Rate-limited for %s: %s", symbol, str(e))
-                raise ProviderRateLimitError(str(e)) from e
-            if "timeout" in error_msg or "timed out" in error_msg:
-                logger.error("Timeout for %s: %s", symbol, str(e))
-                raise ProviderTimeoutError(str(e)) from e
-            logger.error("Provider error for %s: %s", symbol, str(e))
-            raise ProviderError(str(e)) from e
+            except ProviderSchemaError:
+                # Schema errors are fatal, don't fallback to other sources
+                raise
+            except SystemExit as e:
+                logger.warning("Rate limit (SystemExit) hit for %s on source %s", symbol, src)
+                self._trigger_pause(62.0)
+                last_error = ProviderRateLimitError(f"vnstock rate limit (sys.exit) for {symbol}")
+            except Exception as e:
+                # Unwrap tenacity.RetryError if present
+                actual_err = e
+                if type(e).__name__ == "RetryError":
+                    try:
+                        actual_err = e.last_attempt.exception()
+                    except Exception:
+                        pass
+                
+                error_msg = str(actual_err).lower()
+                if "429" in error_msg or "rate" in error_msg or "limit" in error_msg:
+                    logger.warning("Rate-limited for %s on %s: %s", symbol, src, str(actual_err))
+                    self._trigger_pause(10.0)
+                    last_error = ProviderRateLimitError(str(actual_err))
+                elif "timeout" in error_msg or "timed out" in error_msg or "connectionerror" in error_msg:
+                    logger.warning("Timeout/ConnectionError for %s on %s: %s. Trying fallback source...", symbol, src, str(actual_err))
+                    last_error = ProviderTimeoutError(str(actual_err))
+                else:
+                    logger.warning("Provider error for %s on %s: %s. Trying fallback source...", symbol, src, str(actual_err))
+                    last_error = ProviderError(str(actual_err))
+
+        # If we exhausted all sources, raise the last mapped error
+        if last_error:
+            raise last_error
+        raise ProviderError(f"Failed to fetch {symbol} from all sources.")
 
     @staticmethod
     def _validate_schema(df: pd.DataFrame, symbol: str) -> None:
@@ -168,7 +297,7 @@ class VnstockProvider(DataProvider):
             )
 
     @staticmethod
-    def _normalise(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    def _normalise(df: pd.DataFrame, symbol: str, source_name: str) -> pd.DataFrame:
         """Rename / add columns to match the Bronze input contract.
 
         Bronze expects: code, date, open, high, low, close, volume, source.
@@ -176,6 +305,34 @@ class VnstockProvider(DataProvider):
         """
         out = df.rename(columns={"time": "date"}).copy()
         out["code"] = symbol
-        out["source"] = _SOURCE_TAG
+        out["source"] = f"{_SOURCE_TAG}_{source_name}"
         out["date"] = pd.to_datetime(out["date"]).dt.date
         return out[["code", "date", "open", "high", "low", "close", "volume", "source"]]
+
+    def get_all_symbols(self) -> List[str]:
+        """Fetch all stock symbols active on HOSE (HSX)."""
+        try:
+            self._wait_if_paused()
+            self._get_rate_limiter("vci").wait()
+            l = Listing(source='VCI')
+            df = l.symbols_by_exchange()
+            df_stocks = df[
+                (df['type'] == 'STOCK') & 
+                (df['exchange'] == 'HSX')
+            ]
+            return df_stocks['symbol'].tolist()
+        except Exception as e:
+            logger.error("Error fetching all HOSE symbols: %s", str(e))
+            raise ProviderError(str(e)) from e
+
+    def get_vn30_symbols(self) -> List[str]:
+        """Fetch active VN30 stock symbols dynamically."""
+        try:
+            self._wait_if_paused()
+            self._get_rate_limiter("vci").wait()
+            l = Listing(source='VCI')
+            series = l.symbols_by_group('VN30')
+            return series.tolist()
+        except Exception as e:
+            logger.error("Error fetching VN30 symbols: %s", str(e))
+            raise ProviderError(str(e)) from e
