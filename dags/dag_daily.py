@@ -3,11 +3,17 @@ dags/dag_daily.py — Daily stock data pipeline orchestration.
 
 Schedule: 18:00 UTC+7 (11:00 UTC) every weekday — after HOSE closes at 15:00.
 
-Pipeline flow:
-  health_check → fetch_prices → fetch_index
-    → dbt_silver → test_silver
-      → dbt_gold → test_gold
-        → notify_success
+Pipeline flow (sequential):
+  health_check
+    → fetch_prices_vn30   (always — VN30 dynamic from API)
+    → fetch_prices_others (mặc định bật — ~373 mã HOSE còn lại, skip nếu run_vn30_only=True)
+    → fetch_index         (song song với fetch_prices_vn30)
+      → dbt_silver → test_silver
+        → dbt_gold → test_gold
+          → notify_success
+
+Default behaviour: run ALL HOSE stocks (VN30 first, then ~373 others).
+Set run_vn30_only=True at trigger time to run only VN30 (faster, ~5 min).
 
 Design decisions:
   - BashOperator only — no PythonOperator — because ingestion/ and dbt/
@@ -17,11 +23,12 @@ Design decisions:
   - Each task cd's into /opt/airflow/project so PYTHONPATH resolves correctly.
   - Retry 3x with exponential backoff for fetch tasks (transient API errors).
   - on_failure_callback logs to Airflow's built-in alerting.
+  - VN30 symbol list is DYNAMIC (from Listing API), not hardcoded.
 """
 
 from datetime import datetime, timedelta
 
-from airflow.sdk import DAG
+from airflow.sdk import DAG, Param
 from airflow.providers.standard.operators.bash import BashOperator
 
 # ---------------------------------------------------------------------------
@@ -42,7 +49,7 @@ def _on_failure(context):
     ti = context["task_instance"]
     dag_id = ti.dag_id
     task_id = ti.task_id
-    execution_date = context["logical_date"]
+    execution_date = getattr(ti, "logical_date", getattr(ti, "execution_date", "Unknown"))
     exception = context.get("exception", "Unknown")
     print(
         f"[ALERT] DAG={dag_id} Task={task_id} "
@@ -72,6 +79,12 @@ with DAG(
     catchup=False,
     tags=["stock", "daily", "production"],
     max_active_runs=1,
+    params={
+        # Mặc định: chạy TOÀN BỘ HOSE (VN30 trước, ~373 mã còn lại sau).
+        # Bật run_vn30_only=True khi cần chạy nhanh chỉ 30 mã VN30 (~5 phút).
+        "run_vn30_only": Param(False, type="boolean",
+                               description="Chỉ kéo VN30, bỏ qua ~373 mã HOSE còn lại"),
+    },
 ) as dag:
 
     # 1. Health check — verify API connectivity
@@ -79,34 +92,55 @@ with DAG(
         task_id="health_check",
         bash_command=(
             f'{RUN_PREFIX} python -c "'
+            "import sys; "
             "from providers.registry import get_provider; "
             "p = get_provider(); "
-            "p.health_check(); "
-            "print('[OK] Provider healthy')"
+            "sys.exit(0 if p.health_check() else 1)"
             '"'
         ),
         execution_timeout=timedelta(minutes=2),
     )
 
-    # 2. Fetch stock prices (VN30) — today only
-    fetch_prices = BashOperator(
-        task_id="fetch_prices",
+    # 2a. Fetch stock prices (VN30) — today only
+    # VN30 LUÔN chạy — danh sách 30 mã được lấy động từ Listing API, không hardcode.
+    fetch_prices_vn30 = BashOperator(
+        task_id="fetch_prices_vn30",
         bash_command=(
-            f"{RUN_PREFIX} python -m ingestion.fetch_prices "
-            "--start {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --end {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --skip-index"
+            "{% set d = dag_run.logical_date.strftime('%Y-%m-%d') if (dag_run and dag_run.logical_date) else macros.datetime.now().strftime('%Y-%m-%d') %}"
+            f"{RUN_PREFIX} python -m ingestion.fetch_prices --mode vn30 --start {{{{ d }}}} --end {{{{ d }}}}"
         ),
         retries=3,
         retry_delay=timedelta(minutes=2),
         retry_exponential_backoff=True,
-        execution_timeout=timedelta(minutes=15),
+        execution_timeout=timedelta(minutes=30),
+    )
+
+    # 2b. Fetch stock prices (HOSE Others) — today only
+    # Mặc định BẬT. Chỉ skip khi run_vn30_only=True.
+    # ~373 mã = tất cả HOSE STOCK (403) trừ 30 VN30, lấy động từ API.
+    fetch_prices_others = BashOperator(
+        task_id="fetch_prices_others",
+        bash_command=(
+            "{% set d = dag_run.logical_date.strftime('%Y-%m-%d') if (dag_run and dag_run.logical_date) else macros.datetime.now().strftime('%Y-%m-%d') %}"
+            "{% if not params.run_vn30_only %}"
+            f"{RUN_PREFIX} python -m ingestion.fetch_prices --mode others --start {{{{ d }}}} --end {{{{ d }}}}"
+            "{% else %}"
+            'echo "[SKIP] fetch_prices_others: run_vn30_only=true"'
+            "{% endif %}"
+        ),
+        retries=3,
+        retry_delay=timedelta(minutes=2),
+        retry_exponential_backoff=True,
+        execution_timeout=timedelta(minutes=60),
     )
 
     # 3. Fetch index prices (VNINDEX, VN30)
     fetch_index = BashOperator(
         task_id="fetch_index",
         bash_command=(
-            f"{RUN_PREFIX} python -m ingestion.fetch_prices "
-            "--start {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --end {{ (logical_date or run_after).strftime('%Y-%m-%d') }} --skip-prices"
+            f"{RUN_PREFIX} python -m ingestion.fetch_index "
+            "{% set d = dag_run.logical_date.strftime('%Y-%m-%d') if (dag_run and dag_run.logical_date) else macros.datetime.now().strftime('%Y-%m-%d') %}"
+            "--start {{ d }} --end {{ d }}"
         ),
         retries=3,
         retry_delay=timedelta(minutes=2),
@@ -173,9 +207,12 @@ with DAG(
     # ---------------------------------------------------------------------------
     # Task dependencies — linear pipeline
     # ---------------------------------------------------------------------------
-    # health_check → [fetch_prices, fetch_index] → dbt_silver → test_silver
-    #   → dbt_gold → test_gold → notify_success
+    # health_check → [fetch_prices_vn30 (sequential → others), fetch_index]
+    # VN30 chạy trước (task 2a), khi xong mới chạy others (task 2b)
+    # fetch_index chạy song song với nhóm fetch_prices
+    # [fetch_prices_others, fetch_index] >> dbt_silver >> ... >> notify_success
 
-    health_check >> [fetch_prices, fetch_index]
-    [fetch_prices, fetch_index] >> dbt_silver >> test_silver
+    health_check >> [fetch_prices_vn30, fetch_index]
+    fetch_prices_vn30 >> fetch_prices_others
+    [fetch_prices_others, fetch_index] >> dbt_silver >> test_silver
     test_silver >> dbt_gold >> test_gold >> notify_success

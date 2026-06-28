@@ -21,3 +21,28 @@ postgres/data/
 dbt/target/
 dbt/dbt_packages/
 dbt/logs/
+
+# Temporary check directory
+xcheck/
+
+# vnstock config and cache (keep directory structure but ignore contents)
+vnstock_config/*
+!vnstock_config/.gitkeep
+
+# Airflow local auth passwords
+simple_auth_manager_passwords.json
+
+# Ignore all markdown files entirely
+**/*.md
+*.md
+
+# Ignore temporary AI patch scripts, update reports, checklist tasks
+patch_report*.py
+update_report*.py
+scripts/update_*.py
+scripts/deep_clean_*.py
+.agents/
+
+# Editor and testing cache
+.vscode/
+.pytest_cache/

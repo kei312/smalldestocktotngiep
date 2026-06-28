@@ -146,3 +146,26 @@ class DataProvider(ABC):
             ``True`` if healthy, ``False`` otherwise.
         """
         ...
+
+    @abstractmethod
+    def get_all_symbols(self) -> List[str]:
+        """Fetch all stock symbols active on HOSE.
+
+        Returns
+        -------
+        List[str]
+            List of symbols, e.g. ``["VNM", "VCB", ...]``.
+        """
+        ...
+
+    @abstractmethod
+    def get_vn30_symbols(self) -> List[str]:
+        """Fetch active VN30 stock symbols.
+
+        Returns
+        -------
+        List[str]
+            List of VN30 symbols.
+        """
+        ...
+

@@ -1,75 +1,64 @@
-#!/usr/bin/env python
-"""
-Benchmark tool to verify the throughput performance of VnstockProvider.
-Mocks the underlying vnstock API to isolate and measure rate-limiting overhead.
-"""
-
 import time
 import logging
-from datetime import date
-from unittest.mock import patch
-import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import requests
 
-from providers.vnstock_provider import VnstockProvider
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
-# Configure logging to see timestamps of requests
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(threadName)s: %(message)s"
-)
+# Configurable parameters
+TEST_URLS = {
+    "vci": "https://board.vcsc.com.vn/rest/api/v1/finance/price/history?symbol=VNM&resolution=D&from=1704067200&to=1704153600",
+    "kbs": "https://kbsec-price.kbsec.com.vn/api/v1/chart/history?symbol=VNM&resolution=1D&from=1704067200&to=1704153600"
+}
+NUM_REQUESTS = 20
+CONCURRENCY = 4
 
-def mock_history(*args, **kwargs):
-    # Simulate a fast response from the API (e.g. 10ms)
-    time.sleep(0.01)
-    return pd.DataFrame({
-        "time": [pd.Timestamp("2024-01-02")],
-        "open": [100.0],
-        "high": [105.0],
-        "low": [98.0],
-        "close": [102.0],
-        "volume": [1000000]
-    })
-
-@patch('vnstock.Quote.history', side_effect=mock_history)
-def run_benchmark(mock_hist):
-    provider = VnstockProvider()
-    symbols = ["VNM", "VCB", "HPG", "FPT", "VIC", "MWG", "MSN", "CTG", "TCB", "MBB"]
-    
-    print("=" * 60)
-    print(f"Starting throughput benchmark for {len(symbols)} symbols...")
-    print(f"Sources: {provider._rate_limiters.keys()}")
-    print(f"Rate limit interval: {1.05}s per source")
-    print("=" * 60)
-    
+def send_request(source: str, url: str) -> bool:
+    """Send a single HTTP GET request to check response code and performance."""
     start_time = time.time()
+    try:
+        response = requests.get(url, timeout=10)
+        duration = time.time() - start_time
+        if response.status_code == 200:
+            logger.info("Request successful for source=%s (duration=%.2fs)", source, duration)
+            return True
+        else:
+            logger.warning("Request failed for source=%s (status_code=%d, duration=%.2fs)", 
+                           source, response.status_code, duration)
+            return False
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error("Request exception for source=%s: %s (duration=%.2fs)", source, str(e), duration)
+        return False
+
+def main():
+    logger.info("Starting Ingestion Throughput Benchmark...")
+    logger.info("Configuration: requests=%d, concurrency=%d", NUM_REQUESTS, CONCURRENCY)
     
-    # get_prices uses ThreadPoolExecutor internally with max_workers=5
-    df = provider.get_prices(symbols, date(2024, 1, 2), date(2024, 1, 2))
+    start_all = time.time()
+    success_count = 0
     
-    duration = time.time() - start_time
-    print("=" * 60)
-    print("BENCHMARK RESULTS:")
-    print(f"Total symbols fetched: {len(symbols)}")
-    print(f"Total execution time: {duration:.2f} seconds")
-    print(f"DataFrame size: {df.shape}")
+    # We will query KBS and VCI alternately
+    urls_pool = []
+    for i in range(NUM_REQUESTS):
+        source = "vci" if i % 2 == 0 else "kbs"
+        urls_pool.append((source, TEST_URLS[source]))
+        
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+        futures = [executor.submit(send_request, src, url) for src, url in urls_pool]
+        for fut in as_completed(futures):
+            if fut.result():
+                success_count += 1
+                
+    total_duration = time.time() - start_all
+    throughput_per_minute = (success_count / total_duration) * 60 if total_duration > 0 else 0
     
-    # Calculate throughput
-    req_per_minute = (len(symbols) / duration) * 60
-    print(f"Measured Throughput: {req_per_minute:.2f} requests/minute")
-    
-    # Analytical verification
-    # Old global lock: 10 requests * 1.05s = ~10.5s
-    # New per-source locks: 10 requests shared between 2 sources = 5 requests per source
-    # 5 requests per source with 1.05s interval = ~4.2s (with concurrency)
-    print("\nThroughput Analysis:")
-    print("- Under global lock: 10 requests * 1.05s ≈ 10.50 seconds")
-    print("- Under per-source locks (expected): 5 requests/source * 1.05s ≈ 4.20 seconds")
-    
-    if duration < 7.0:
-        print("\nSUCCESS: Per-source lock parallelized requests successfully!")
-    else:
-        print("\nWARNING: Execution time was slower than expected. Check rate limiters.")
-    print("=" * 60)
+    logger.info("=== BENCHMARK SUMMARY ===")
+    logger.info("Total Requests Sent : %d", NUM_REQUESTS)
+    logger.info("Successful Requests : %d", success_count)
+    logger.info("Total Duration      : %.2f seconds", total_duration)
+    logger.info("Calculated Throughput: %.2f requests/minute", throughput_per_minute)
 
 if __name__ == "__main__":
-    run_benchmark()
+    main()

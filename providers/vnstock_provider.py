@@ -37,18 +37,19 @@ _SOURCE_TAG = "vnstock"
 
 # Optimized global rate limit: 60 requests/minute is 1.0s. 
 # We use 1.05s per request for safety margin.
-_REQUEST_INTERVAL_SECONDS = 1.05
+_REQUEST_INTERVAL_SECONDS = 1.5
 
 # Supported stock sources for history quotes in vnstock 4.x
-_SOURCES = ["vci", "kbs"] #, "msn"
+_UNIQUE_SOURCES = ["kbs", "vci"]
+_SOURCES_POOL = ["kbs", "kbs", "kbs", "kbs", "vci"]
 _source_index = 0
-_source_lock = threading.Lock()
+_source_lock = threading.Lock() 
 
 def _get_next_source() -> str:
-    """Thread-safe round-robin source rotation."""
+    """Thread-safe round-robin source rotation from pool (4 kbs : 1 vci)."""
     global _source_index
     with _source_lock:
-        src = _SOURCES[_source_index % len(_SOURCES)]
+        src = _SOURCES_POOL[_source_index % len(_SOURCES_POOL)]
         _source_index += 1
         return src
 
@@ -73,7 +74,7 @@ class VnstockProvider(DataProvider):
 
     def __init__(self):
         self._rate_limiters = {
-            src: RateLimiter(_REQUEST_INTERVAL_SECONDS) for src in _SOURCES
+            src: RateLimiter(_REQUEST_INTERVAL_SECONDS) for src in _UNIQUE_SOURCES
         }
         
         # Thread-safe global pause event for rate-limiting
@@ -102,7 +103,7 @@ class VnstockProvider(DataProvider):
         if src_lower in self._rate_limiters:
             return self._rate_limiters[src_lower]
         # Fallback to the first available source rate limiter
-        return self._rate_limiters[_SOURCES[0]]
+        return self._rate_limiters[_UNIQUE_SOURCES[0]]
 
     def _wait_if_paused(self):
         """Block if we are currently in a rate limit cooldown pause."""
@@ -189,22 +190,27 @@ class VnstockProvider(DataProvider):
         return pd.concat(frames, ignore_index=True)
 
     def health_check(self) -> bool:
-        """Quick connectivity test: fetch 1 day of VNM data."""
-        try:
-            self._wait_if_paused()
-            self._get_rate_limiter("vci").wait()
-            quote = Quote(symbol="VNM", source="vci")
-            df = quote.history(
-                start="2024-01-02",
-                end="2024-01-03",
-                interval="1D",
-            )
-            ok = df is not None and not df.empty
-            logger.info("Health check: %s", "OK" if ok else "EMPTY")
-            return ok
-        except Exception as e:
-            logger.error("Health check failed: %s", str(e))
-            return False
+        """Quick connectivity test: check availability of both VCI and KBS sources.
+        Returns True if at least one source is accessible (enabling fallback operation).
+        """
+        sources = ["vci", "kbs"]
+        for src in sources:
+            try:
+                self._wait_if_paused()
+                self._get_rate_limiter(src).wait()
+                quote = Quote(symbol="VNM", source=src)
+                df = quote.history(
+                    start="2024-01-02",
+                    end="2024-01-03",
+                    interval="1D",
+                )
+                if df is not None and not df.empty:
+                    logger.info("Health check OK for source=%s", src)
+                    return True
+            except Exception as e:
+                logger.warning("Health check failed for source=%s: %s", src, str(e))
+        logger.error("Health check failed for all sources.")
+        return False
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -220,12 +226,13 @@ class VnstockProvider(DataProvider):
 
         Rotates sources and implements active fallback. Maps vnstock exceptions.
         """
-        sources = list(_SOURCES)
         start_src = _get_next_source()
         
-        # Re-order to try start_src first
-        sources.remove(start_src)
-        sources.insert(0, start_src)
+        # Build list trying start_src first, then fallback to other unique sources
+        sources = [start_src]
+        for src in _UNIQUE_SOURCES:
+            if src != start_src:
+                sources.append(src)
 
         last_error = None
         for src in sources:
@@ -259,9 +266,11 @@ class VnstockProvider(DataProvider):
                 raise
             except SystemExit as e:
                 logger.warning("Rate limit (SystemExit) hit for %s on source %s", symbol, src)
-                self._trigger_pause(62.0)
+                self._trigger_pause(15.0)
                 last_error = ProviderRateLimitError(f"vnstock rate limit (sys.exit) for {symbol}")
             except Exception as e:
+                import requests
+                
                 # Unwrap tenacity.RetryError if present
                 actual_err = e
                 if type(e).__name__ == "RetryError":
@@ -270,17 +279,36 @@ class VnstockProvider(DataProvider):
                     except Exception:
                         pass
                 
-                error_msg = str(actual_err).lower()
-                if "429" in error_msg or "rate" in error_msg or "limit" in error_msg:
+                import requests
+                
+                # Unwrap tenacity.RetryError if present
+                actual_err = e
+                if type(e).__name__ == "RetryError":
+                    try:
+                        actual_err = e.last_attempt.exception()
+                    except Exception:
+                        pass
+                
+                if isinstance(actual_err, requests.exceptions.HTTPError) and actual_err.response.status_code == 429:
                     logger.warning("Rate-limited for %s on %s: %s", symbol, src, str(actual_err))
                     self._trigger_pause(10.0)
                     last_error = ProviderRateLimitError(str(actual_err))
-                elif "timeout" in error_msg or "timed out" in error_msg or "connectionerror" in error_msg:
+                elif isinstance(actual_err, requests.exceptions.Timeout) or isinstance(actual_err, requests.exceptions.ConnectionError):
                     logger.warning("Timeout/ConnectionError for %s on %s: %s. Trying fallback source...", symbol, src, str(actual_err))
                     last_error = ProviderTimeoutError(str(actual_err))
                 else:
-                    logger.warning("Provider error for %s on %s: %s. Trying fallback source...", symbol, src, str(actual_err))
-                    last_error = ProviderError(str(actual_err))
+                    # Fallback string matching for non-requests exceptions or wrapped ones
+                    error_msg = str(actual_err).lower()
+                    if "429" in error_msg or "rate" in error_msg or "limit" in error_msg:
+                        logger.warning("Rate-limited (str match) for %s on %s: %s", symbol, src, str(actual_err))
+                        self._trigger_pause(10.0)
+                        last_error = ProviderRateLimitError(str(actual_err))
+                    elif "timeout" in error_msg or "timed out" in error_msg or "connectionerror" in error_msg:
+                        logger.warning("Timeout/ConnectionError (str match) for %s on %s: %s. Trying fallback source...", symbol, src, str(actual_err))
+                        last_error = ProviderTimeoutError(str(actual_err))
+                    else:
+                        logger.warning("Provider error for %s on %s: %s. Trying fallback source...", symbol, src, str(actual_err))
+                        last_error = ProviderError(str(actual_err))
 
         # If we exhausted all sources, raise the last mapped error
         if last_error:
@@ -307,7 +335,18 @@ class VnstockProvider(DataProvider):
         out["code"] = symbol
         out["source"] = f"{_SOURCE_TAG}_{source_name}"
         out["date"] = pd.to_datetime(out["date"]).dt.date
-        return out[["code", "date", "open", "high", "low", "close", "volume", "source"]]
+        out = out[["code", "date", "open", "high", "low", "close", "volume", "source"]]
+
+        # Dedup tại nguồn: API có thể trả duplicate dates cho cùng 1 symbol
+        before = len(out)
+        out = out.drop_duplicates(subset=["date"], keep="last")
+        if len(out) < before:
+            logger.warning(
+                "_normalise: dropped %d duplicate date rows for %s from %s",
+                before - len(out), symbol, source_name,
+            )
+
+        return out
 
     def get_all_symbols(self) -> List[str]:
         """Fetch all stock symbols active on HOSE (HSX)."""

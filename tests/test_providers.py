@@ -4,7 +4,7 @@ from datetime import date
 import pandas as pd
 from unittest.mock import patch
 
-from providers.base import ProviderRateLimitError, ProviderSchemaError, ProviderTimeoutError
+from providers.base import ProviderError, ProviderRateLimitError, ProviderSchemaError, ProviderTimeoutError
 from providers.vnstock_provider import VnstockProvider
 from providers.mock_provider import MockProvider
 from providers.registry import get_provider
@@ -54,10 +54,40 @@ def test_mock_provider_schema():
 
 # P-05: Registry returns correct provider
 def test_registry_returns_correct_provider():
-    os.environ["PROVIDER"] = "mock"
-    provider = get_provider()
-    assert isinstance(provider, MockProvider)
+    from ingestion.config import config
+    with patch.object(config, 'provider', 'mock'):
+        provider = get_provider()
+        assert isinstance(provider, MockProvider)
     
-    os.environ["PROVIDER"] = "vnstock"
-    provider = get_provider()
-    assert isinstance(provider, VnstockProvider)
+    with patch.object(config, 'provider', 'vnstock'):
+        provider = get_provider()
+        assert isinstance(provider, VnstockProvider)
+
+# P-06: MockProvider returns fallback row for future date
+def test_mock_provider_future_date_fallback():
+    provider = MockProvider()
+    start = date(2030, 1, 1)
+    end = date(2030, 1, 2)
+    df = provider.get_prices(["VNM"], start, end)
+    assert not df.empty
+    assert df.iloc[0]['date'] == end
+    assert df.iloc[0]['code'] == "VNM"
+
+# P-07: VnstockProvider handles empty API response gracefully
+@patch('vnstock.Quote.history')
+def test_vnstock_empty_response(mock_history):
+    provider = VnstockProvider()
+    mock_history.return_value = pd.DataFrame()
+    
+    df = provider.get_prices(["VNM"], date(2024, 1, 1), date(2024, 1, 2))
+    assert df.empty
+
+# P-08: VnstockProvider handles invalid/NaN symbol gracefully
+@patch('vnstock.Quote.history')
+def test_vnstock_nan_symbol(mock_history):
+    provider = VnstockProvider()
+    mock_history.side_effect = Exception("Symbol not found")
+    with pytest.raises(ProviderError) as exc_info:
+        provider.get_prices(["NaN"], date(2024, 1, 1), date(2024, 1, 2))
+    assert "Symbol not found" in str(exc_info.value)
+

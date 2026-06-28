@@ -1,0 +1,4 @@
+.gemini/
+.antigravity/
+venv/
+.pytest_cache/

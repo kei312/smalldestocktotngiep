@@ -43,3 +43,9 @@ CREATE TABLE bronze.bronze_index_2023 PARTITION OF bronze.bronze_index FOR VALUE
 CREATE TABLE bronze.bronze_index_2024 PARTITION OF bronze.bronze_index FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
 CREATE TABLE bronze.bronze_index_2025 PARTITION OF bronze.bronze_index FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
 CREATE TABLE bronze.bronze_index_2026 PARTITION OF bronze.bronze_index FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+
+CREATE TABLE IF NOT EXISTS bronze.bronze_vn30_components (
+    code VARCHAR(20) PRIMARY KEY,
+    ingested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+

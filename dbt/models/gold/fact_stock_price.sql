@@ -1,6 +1,5 @@
 {{ config(
     materialized='table',
-    unique_key=['symbol', 'trade_date'],
     indexes=[
       {'columns': ['symbol', 'trade_date'], 'unique': True},
       {'columns': ['symbol', 'row_num'], 'unique': True}

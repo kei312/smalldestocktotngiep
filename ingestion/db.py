@@ -58,6 +58,16 @@ def save_bronze_prices(df: pd.DataFrame, table: str = "bronze.bronze_prices") ->
             logger.error("Missing required column in dataframe: %s", col)
             raise ValueError(f"Missing required column: {col}")
 
+    # Dedup trước khi upsert — PostgreSQL báo CardinalityViolation nếu batch có 2 rows
+    # cùng (code, date). Giữ dòng cuối (latest ingested_at) khi có trùng lặp.
+    before = len(df)
+    df = df.drop_duplicates(subset=["code", "date"], keep="last")
+    if len(df) < before:
+        logger.warning(
+            "Dropped %d duplicate (code, date) rows before upsert (before=%d, after=%d)",
+            before - len(df), before, len(df),
+        )
+
     # Ensure native Python types for psycopg2 compatibility
     records = df[columns].to_records(index=False)
     data_tuples = [tuple(row) for row in records]
@@ -91,3 +101,38 @@ def save_bronze_prices(df: pd.DataFrame, table: str = "bronze.bronze_prices") ->
                 conn.rollback()
                 logger.error("Failed to insert data into %s: %s", table, e)
                 raise
+
+def save_bronze_vn30_components(symbols: list[str]) -> None:
+    """
+    Save the dynamic VN30 symbol list to bronze.bronze_vn30_components.
+    Truncates the table before inserting the fresh list.
+    """
+    if not symbols:
+        logger.warning("No VN30 symbols to save")
+        return
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            try:
+                # Ensure table exists (safeguard)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS bronze.bronze_vn30_components (
+                        code VARCHAR(20) PRIMARY KEY,
+                        ingested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                cur.execute("TRUNCATE TABLE bronze.bronze_vn30_components;")
+                
+                insert_query = """
+                    INSERT INTO bronze.bronze_vn30_components (code)
+                    VALUES (%s)
+                    ON CONFLICT (code) DO NOTHING;
+                """
+                psycopg2.extras.execute_batch(cur, insert_query, [(sym,) for sym in symbols])
+                conn.commit()
+                logger.info("Successfully updated bronze.bronze_vn30_components with %d symbols", len(symbols))
+            except Exception as e:
+                conn.rollback()
+                logger.error("Failed to save bronze_vn30_components: %s", e)
+                raise
+

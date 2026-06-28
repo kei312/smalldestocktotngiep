@@ -1,7 +1,7 @@
 """
 Task 2.3.8 — G-03: MACD verification
 So sánh SQL output (từ PostgreSQL) với Python reference implementation.
-Acceptance: max error < 0.5% cho mọi giá trị MACD trên 3 mã.
+Acceptance: max error < 0.1% cho mọi giá trị MACD trên 3 mã.
 """
 import math
 import os
@@ -145,15 +145,15 @@ def run_verification():
         max_line   = max((e for e in errors_line   if e is not None), default=0)
         max_signal = max((e for e in errors_signal if e is not None), default=0)
 
-        status_line   = "✅ PASS" if max_line   < 0.5 else "❌ FAIL"
-        status_signal = "✅ PASS" if max_signal < 0.5 else "❌ FAIL"
+        status_line   = "✅ PASS" if max_line   < 0.1 else "❌ FAIL"
+        status_signal = "✅ PASS" if max_signal < 0.1 else "❌ FAIL"
 
         print(f"[{symbol}]  line rows: {len(valid_line)}, signal rows: {len(valid_signal)}")
         print(f"[{symbol}]  MACD line   max error: {max_line:.4f}%  {status_line}")
         print(f"[{symbol}]  MACD signal max error: {max_signal:.4f}%  {status_signal}")
         print()
 
-        if max_line >= 0.5 or max_signal >= 0.5:
+        if max_line >= 0.1 or max_signal >= 0.1:
             all_pass = False
 
     conn.close()

@@ -89,9 +89,10 @@ def main():
     # 1.3 Top Movers (with percent change calculated on normalized prices)
     # We fetch the entire prices history to compute prev_close and pct_change cleanly in Python
     all_prices_sql = """
-        SELECT symbol, trade_date, close_price
-        FROM public_gold.fact_stock_price
-        ORDER BY symbol, trade_date ASC;
+        SELECT p.symbol, p.trade_date, p.close_price, p.volume, COALESCE(s.is_vn30, FALSE) as is_vn30
+        FROM public_gold.fact_stock_price p
+        LEFT JOIN public_gold.dim_stock s ON p.symbol = s.symbol
+        ORDER BY p.symbol, p.trade_date ASC;
     """
     df_all_prices = query_to_dataframe(conn, all_prices_sql)
     
@@ -112,16 +113,29 @@ def main():
     print("Fetching data for Dashboard 2 (Stock Analysis)...")
     # 2.1 Indicators data for all symbols
     indicators_sql = """
-        SELECT symbol, trade_date, close_price, ma5, ma20, bb_upper, bb_lower, rsi_14, macd_line, macd_signal, macd_histogram
-        FROM public_gold.fact_stock_indicators
-        ORDER BY symbol, trade_date ASC;
+        SELECT 
+            ind.symbol, 
+            ind.trade_date, 
+            ind.close_price, 
+            ind.ma50, 
+            ind.ma200, 
+            ind.bb_upper, 
+            ind.bb_lower, 
+            ind.rsi_14, 
+            ind.macd_line, 
+            ind.macd_signal, 
+            ind.macd_histogram,
+            COALESCE(s.is_vn30, FALSE) as is_vn30
+        FROM public_gold.fact_stock_indicators ind
+        LEFT JOIN public_gold.dim_stock s ON ind.symbol = s.symbol
+        ORDER BY ind.symbol, ind.trade_date ASC;
     """
     df_indicators = query_to_dataframe(conn, indicators_sql)
 
     conn.close()
 
-    # Normalize technical indicator prices (close, ma5, ma20, bb_upper, bb_lower)
-    for col in ['close_price', 'ma5', 'ma20', 'bb_upper', 'bb_lower']:
+    # Normalize technical indicator prices (close_price, ma50, ma200, bb_upper, bb_lower)
+    for col in ['close_price', 'ma50', 'ma200', 'bb_upper', 'bb_lower']:
         df_indicators[col] = df_indicators[col].apply(normalize_price)
 
     # Pre-process Indicators Data for Javascript (grouped by symbol)
@@ -136,14 +150,15 @@ def main():
         indicators_by_symbol[sym] = {
             'trade_date': df_sym['trade_date'].tolist(),
             'close_price': df_sym['close_price'].fillna('null').tolist(),
-            'ma5': df_sym['ma5'].fillna('null').tolist(),
-            'ma20': df_sym['ma20'].fillna('null').tolist(),
+            'ma50': df_sym['ma50'].fillna('null').tolist(),
+            'ma200': df_sym['ma200'].fillna('null').tolist(),
             'bb_upper': df_sym['bb_upper'].fillna('null').tolist(),
             'bb_lower': df_sym['bb_lower'].fillna('null').tolist(),
             'rsi_14': df_sym['rsi_14'].fillna('null').tolist(),
             'macd_line': df_sym['macd_line'].fillna('null').tolist(),
             'macd_signal': df_sym['macd_signal'].fillna('null').tolist(),
-            'macd_histogram': df_sym['macd_histogram'].fillna('null').tolist()
+            'macd_histogram': df_sym['macd_histogram'].fillna('null').tolist(),
+            'is_vn30': bool(df_sym['is_vn30'].iloc[0]) if not df_sym.empty else False
         }
 
     # Generate Mock Fundamentals (Dashboard 4)
@@ -195,8 +210,22 @@ def main():
             'symbol': str(row['symbol']),
             'close_price': float(row['close_normalized']),
             'prev_close': prev_close_val,
-            'pct_change': pct_change_val
+            'pct_change': pct_change_val,
+            'is_vn30': bool(row['is_vn30']),
+            'volume': int(row['volume']) if not pd.isna(row['volume']) else 0
         })
+
+    # Calculate historical stats for VN30 to support Dashboard 3 (Market Trends)
+    df_vn30_prices = df_all_prices[df_all_prices['is_vn30'] == True].copy()
+    vn30_history = df_vn30_prices.groupby('trade_date').agg(
+        gainers=('pct_change', lambda x: int((x > 0).sum())),
+        losers=('pct_change', lambda x: int((x < 0).sum())),
+        unchanged=('pct_change', lambda x: int((x == 0).sum())),
+        total_volume=('volume', lambda x: float(x.sum()) if not x.isna().all() else 0.0)
+    ).reset_index()
+    
+    vn30_history = vn30_history.sort_values(by='trade_date')
+    vn30_history_dates = vn30_history['trade_date'].apply(lambda x: x.strftime('%Y-%m-%d') if isinstance(x, (datetime, pd.Timestamp)) else str(x)).tolist()
 
     # Prepare data dict to embed in HTML
     data_payload = {
@@ -217,6 +246,13 @@ def main():
             'gainers': df_market_history['gainers'].tolist(),
             'losers': df_market_history['losers'].tolist(),
             'unchanged': df_market_history['unchanged'].tolist(),
+        },
+        'vn30_history': {
+            'trade_date': vn30_history_dates,
+            'total_volume': vn30_history['total_volume'].tolist(),
+            'gainers': vn30_history['gainers'].tolist(),
+            'losers': vn30_history['losers'].tolist(),
+            'unchanged': vn30_history['unchanged'].tolist(),
         },
         'top_movers': top_movers_list,
         'symbols': symbols,
@@ -354,10 +390,10 @@ def main():
     </header>
 
     <div class="container">
-        <!-- Navigation Tabs -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <ul class="nav nav-pills justify-content-center justify-content-md-start" id="dashboard-nav">
+        <!-- Navigation Tabs & Global Group Filter -->
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-8 col-12">
+                <ul class="nav nav-pills justify-content-center justify-content-md-start mb-3 mb-md-0" id="dashboard-nav">
                     <li class="nav-item me-2 mb-2">
                         <button class="nav-link active" onclick="switchTab('market-overview')">Market Overview (DB 1)</button>
                     </li>
@@ -372,6 +408,18 @@ def main():
                     </li>
                 </ul>
             </div>
+            <div class="col-md-4 col-12 text-md-end text-center">
+                <div class="d-inline-flex align-items-center bg-dark p-1 rounded border border-secondary">
+                    <span class="text-info fw-bold me-2 ms-2 small">BỘ LỌC TOÀN CỤC:</span>
+                    <div class="btn-group" role="group" aria-label="Global Group Filter">
+                        <input type="radio" class="btn-check" name="global-group-filter" id="global-filter-all" autocomplete="off" checked onchange="onGlobalGroupChange('all')">
+                        <label class="btn btn-sm btn-outline-info" for="global-filter-all">Tất cả</label>
+
+                        <input type="radio" class="btn-check" name="global-group-filter" id="global-filter-vn30" autocomplete="off" onchange="onGlobalGroupChange('vn30')">
+                        <label class="btn btn-sm btn-outline-info" for="global-filter-vn30">Chỉ VN30</label>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ==================== DASHBOARD 1: MARKET OVERVIEW ==================== -->
@@ -381,7 +429,7 @@ def main():
                 <div class="col-md-3 col-sm-6">
                     <div class="card kpi-card">
                         <div class="kpi-value text-info" id="kpi-vnindex">0.00</div>
-                        <div class="kpi-label">VN-Index</div>
+                        <div class="kpi-label" id="kpi-vnindex-label">VN-Index</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
@@ -416,7 +464,7 @@ def main():
                 </div>
                 <div class="col-lg-4">
                     <div class="card">
-                        <div class="card-header">Độ Rộng Thị Trường (Ngày Gần Nhất)</div>
+                        <div class="card-header" id="market-breadth-header">Độ Rộng Thị Trường (Ngày Gần Nhất)</div>
                         <div class="card-body">
                             <div id="market-breadth-pie" style="height: 400px;"></div>
                         </div>
@@ -457,7 +505,7 @@ def main():
             <!-- Symbol Selector -->
             <div class="row align-items-center mb-4">
                 <div class="col-md-4">
-                    <label for="symbol-select" class="form-label fw-bold text-info">Chọn mã cổ phiếu (VN30):</label>
+                    <label for="symbol-select" class="form-label fw-bold text-info">Chọn mã cổ phiếu:</label>
                     <select class="form-select fs-5" id="symbol-select" onchange="onSymbolChange(this.value)">
                         <!-- Will be filled by JS -->
                     </select>
@@ -471,7 +519,7 @@ def main():
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">Biểu Đồ Giá Close & Trung Bình Động (MA5 / MA20) - Đơn vị: x1000 VND</div>
+                        <div class="card-header">Biểu Đồ Giá Close & Trung Bình Động (MA50 / MA200) - Đơn vị: x1000 VND</div>
                         <div class="card-body">
                             <div id="price-ma-chart" style="height: 400px;"></div>
                         </div>
@@ -542,20 +590,20 @@ def main():
             <div class="row">
                 <div class="col-md-4">
                     <div class="card kpi-card">
-                        <div class="kpi-value text-gainer">16.4</div>
-                        <div class="kpi-label">P/E Trung Bình VN30</div>
+                        <div class="kpi-value text-gainer" id="kpi-avg-pe">0.0</div>
+                        <div class="kpi-label" id="kpi-avg-pe-label">P/E Trung Bình</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card kpi-card">
-                        <div class="kpi-value text-info">2.6</div>
-                        <div class="kpi-label">P/B Trung Bình VN30</div>
+                        <div class="kpi-value text-info" id="kpi-avg-pb">0.0</div>
+                        <div class="kpi-label" id="kpi-avg-pb-label">P/B Trung Bình</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card kpi-card">
-                        <div class="kpi-value text-warning">17.2%</div>
-                        <div class="kpi-label">ROE Trung Bình VN30</div>
+                        <div class="kpi-value text-warning" id="kpi-avg-roe">0.0%</div>
+                        <div class="kpi-label" id="kpi-avg-roe-label">ROE Trung Bình</div>
                     </div>
                 </div>
             </div>
@@ -564,7 +612,7 @@ def main():
             <div class="row">
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">So Sánh Chỉ Số P/E Rổ VN30 (Từ Thấp Đến Cao)</div>
+                        <div class="card-header" id="pe-compare-header">So Sánh Chỉ Số P/E</div>
                         <div class="card-body">
                             <div id="pe-compare-chart" style="height: 400px;"></div>
                         </div>
@@ -572,7 +620,7 @@ def main():
                 </div>
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">So Sánh Tỷ Lệ ROE (%) Rổ VN30 (Từ Cao Đến Thấp)</div>
+                        <div class="card-header" id="roe-compare-header">So Sánh Tỷ Lệ ROE (%)</div>
                         <div class="card-body">
                             <div id="roe-compare-chart" style="height: 400px;"></div>
                         </div>
@@ -634,27 +682,52 @@ def main():
             legend: {{ orientation: 'h', y: 1.1, x: 0 }}
         }};
 
-        window.addEventListener('load', () => {{
+        function filterSymbols(group) {{
             const select = document.getElementById('symbol-select');
-            DATA.symbols.forEach(sym => {{
+            const currentValue = select.value;
+            select.innerHTML = '';
+            
+            let filteredSymbols = [];
+            if (group === 'vn30') {{
+                filteredSymbols = DATA.symbols.filter(sym => {{
+                    const sData = DATA.indicators_by_symbol[sym];
+                    return sData && sData.is_vn30;
+                }});
+            }} else {{
+                filteredSymbols = DATA.symbols;
+            }}
+            
+            filteredSymbols.forEach(sym => {{
                 const opt = document.createElement('option');
                 opt.value = sym;
                 opt.text = sym;
                 select.appendChild(opt);
             }});
             
-            if (DATA.symbols.includes('FPT')) {{
-                select.value = 'FPT';
-            }} else if (DATA.symbols.length > 0) {{
-                select.value = DATA.symbols[0];
-            }}
-
-            renderMarketOverview();
-            if (select.value) {{
+            if (filteredSymbols.includes(currentValue)) {{
+                select.value = currentValue;
+            }} else if (filteredSymbols.length > 0) {{
+                if (filteredSymbols.includes('FPT')) {{
+                    select.value = 'FPT';
+                }} else {{
+                    select.value = filteredSymbols[0];
+                }}
                 onSymbolChange(select.value);
             }}
+        }}
+
+        window.currentGroup = 'all';
+
+        function onGlobalGroupChange(group) {{
+            window.currentGroup = group;
+            filterSymbols(group);
+            renderMarketOverview();
             renderMarketTrends();
             renderFundamentals();
+        }}
+
+        window.addEventListener('load', () => {{
+            onGlobalGroupChange('all');
         }});
 
         function switchTab(tabId) {{
@@ -683,11 +756,26 @@ def main():
 
         function renderMarketOverview() {{
             const lm = DATA.latest_market;
+            const group = window.currentGroup || 'all';
             
-            document.getElementById('kpi-vnindex').innerText = lm.vnindex_close.toFixed(2);
-            document.getElementById('kpi-gainers').innerText = lm.gainers;
-            document.getElementById('kpi-losers').innerText = lm.losers;
-            document.getElementById('kpi-volume').innerText = (lm.total_volume / 1000000).toFixed(2) + " M";
+            let gainersCount = lm.gainers;
+            let losersCount = lm.losers;
+            let unchangedCount = lm.unchanged;
+            let totalVolume = lm.total_volume;
+            
+            if (group === 'vn30') {{
+                const vn30Movers = DATA.top_movers.filter(item => item.is_vn30);
+                gainersCount = vn30Movers.filter(item => item.pct_change > 0).length;
+                losersCount = vn30Movers.filter(item => item.pct_change < 0).length;
+                unchangedCount = vn30Movers.filter(item => item.pct_change === 0).length;
+                totalVolume = vn30Movers.reduce((sum, item) => sum + (item.volume || 0), 0);
+            }}
+
+            document.getElementById('kpi-vnindex').innerText = (group === 'vn30' ? lm.vn30_close : lm.vnindex_close).toFixed(2);
+            document.getElementById('kpi-vnindex-label').innerText = group === 'vn30' ? 'VN30 Index' : 'VN-Index';
+            document.getElementById('kpi-gainers').innerText = gainersCount;
+            document.getElementById('kpi-losers').innerText = losersCount;
+            document.getElementById('kpi-volume').innerText = (totalVolume / 1000000).toFixed(2) + " M";
 
             const traceVnIndex = {{
                 x: DATA.market_history.trade_date,
@@ -713,7 +801,7 @@ def main():
 
             const tracePie = {{
                 labels: ['Tăng (Gainers)', 'Giảm (Losers)', 'Không đổi'],
-                values: [lm.gainers, lm.losers, lm.unchanged],
+                values: [gainersCount, losersCount, unchangedCount],
                 type: 'pie',
                 marker: {{
                     colors: ['#22c55e', '#ef4444', '#64748b']
@@ -727,10 +815,13 @@ def main():
             layoutPie.legend = {{ orientation: 'h', y: -0.1 }};
             Plotly.newPlot('market-breadth-pie', [tracePie], layoutPie);
 
+            document.getElementById('market-breadth-header').innerText = group === 'vn30' ? 'Độ Rộng Thị Trường (VN30)' : 'Độ Rộng Thị Trường (Toàn Thị Trường)';
+
             const moversBody = document.getElementById('top-movers-body');
             moversBody.innerHTML = '';
             
-            const displayMovers = DATA.top_movers.slice(0, 10);
+            const filteredMovers = group === 'vn30' ? DATA.top_movers.filter(item => item.is_vn30) : DATA.top_movers;
+            const displayMovers = filteredMovers.slice(0, 10);
             
             displayMovers.forEach(item => {{
                 const tr = document.createElement('tr');
@@ -762,25 +853,25 @@ def main():
                 name: 'Giá Close',
                 line: {{ color: '#f8fafc', width: 2 }}
             }};
-            const traceMA5 = {{
+            const traceMA50 = {{
                 x: sData.trade_date,
-                y: sData.ma5,
+                y: sData.ma50,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'MA5',
+                name: 'MA50',
                 line: {{ color: '#eab308', width: 1.5 }}
             }};
-            const traceMA20 = {{
+            const traceMA200 = {{
                 x: sData.trade_date,
-                y: sData.ma20,
+                y: sData.ma200,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'MA20',
+                name: 'MA200',
                 line: {{ color: '#3b82f6', width: 1.5 }}
             }};
             const layoutPriceMA = JSON.parse(JSON.stringify(chartLayoutDefaults));
             layoutPriceMA.margin.t = 10;
-            Plotly.newPlot('price-ma-chart', [traceClose, traceMA5, traceMA20], layoutPriceMA);
+            Plotly.newPlot('price-ma-chart', [traceClose, traceMA50, traceMA200], layoutPriceMA);
 
             const traceBBClose = {{
                 x: sData.trade_date,
@@ -876,22 +967,28 @@ def main():
         }}
 
         function renderMarketTrends() {{
+            const group = window.currentGroup || 'all';
+            const history = group === 'vn30' ? DATA.vn30_history : DATA.market_history;
+            const titleG = group === 'vn30' ? 'VN30 Tăng (Gainers)' : 'Số Mã Tăng (Gainers)';
+            const titleL = group === 'vn30' ? 'VN30 Giảm (Losers)' : 'Số Mã Giảm (Losers)';
+            const titleVol = group === 'vn30' ? 'Thanh Khoản VN30 (Volume)' : 'Thanh Khoản Thị Trường (Volume)';
+
             const traceG = {{
-                x: DATA.market_history.trade_date,
-                y: DATA.market_history.gainers,
+                x: history.trade_date,
+                y: history.gainers,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Số Mã Tăng (Gainers)',
+                name: titleG,
                 line: {{ color: '#22c55e', width: 2 }},
                 fill: 'tozeroy',
                 fillcolor: 'rgba(34, 197, 94, 0.1)'
             }};
             const traceL = {{
-                x: DATA.market_history.trade_date,
-                y: DATA.market_history.losers,
+                x: history.trade_date,
+                y: history.losers,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Số Mã Giảm (Losers)',
+                name: titleL,
                 line: {{ color: '#ef4444', width: 2 }},
                 fill: 'tozeroy',
                 fillcolor: 'rgba(239, 68, 68, 0.1)'
@@ -902,11 +999,11 @@ def main():
             Plotly.newPlot('gainers-losers-trend', [traceG, traceL], layoutTrend);
 
             const traceV = {{
-                x: DATA.market_history.trade_date,
-                y: DATA.market_history.total_volume,
+                x: history.trade_date,
+                y: history.total_volume,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Volume Giao Dịch',
+                name: titleVol,
                 line: {{ color: '#eab308', width: 2 }},
                 fill: 'tozeroy',
                 fillcolor: 'rgba(234, 179, 8, 0.1)'
@@ -919,9 +1016,39 @@ def main():
 
         function renderFundamentals() {{
             const fund = DATA.fundamentals;
+            const group = window.currentGroup || 'all';
             
-            const peSymbols = [...fund].sort((a,b) => a.pe - b.pe).map(item => item.symbol);
-            const peValues = [...fund].sort((a,b) => a.pe - b.pe).map(item => item.pe);
+            let filteredFund = [];
+            if (group === 'vn30') {{
+                filteredFund = fund.filter(item => {{
+                    const sData = DATA.indicators_by_symbol[item.symbol];
+                    return sData && sData.is_vn30;
+                }});
+            }} else {{
+                filteredFund = fund;
+            }}
+
+            let avgPE = 0, avgPB = 0, avgROE = 0;
+            if (filteredFund.length > 0) {{
+                avgPE = filteredFund.reduce((sum, item) => sum + item.pe, 0) / filteredFund.length;
+                avgPB = filteredFund.reduce((sum, item) => sum + item.pb, 0) / filteredFund.length;
+                avgROE = filteredFund.reduce((sum, item) => sum + item.roe, 0) / filteredFund.length;
+            }}
+
+            document.getElementById('kpi-avg-pe').innerText = avgPE.toFixed(1);
+            document.getElementById('kpi-avg-pe-label').innerText = group === 'vn30' ? 'P/E Trung Bình VN30' : 'P/E Trung Bình (All)';
+            document.getElementById('kpi-avg-pb').innerText = avgPB.toFixed(1);
+            document.getElementById('kpi-avg-pb-label').innerText = group === 'vn30' ? 'P/B Trung Bình VN30' : 'P/B Trung Bình (All)';
+            document.getElementById('kpi-avg-roe').innerText = avgROE.toFixed(1) + "%";
+            document.getElementById('kpi-avg-roe-label').innerText = group === 'vn30' ? 'ROE Trung Bình VN30' : 'ROE Trung Bình (All)';
+
+            document.getElementById('pe-compare-header').innerText = group === 'vn30' ? 'So Sánh Chỉ Số P/E Rổ VN30' : 'So Sánh Chỉ Số P/E (Top 30)';
+            document.getElementById('roe-compare-header').innerText = group === 'vn30' ? 'So Sánh Tỷ Lệ ROE (%) Rổ VN30' : 'So Sánh Tỷ Lệ ROE (%) (Top 30)';
+
+            const displayFund = group === 'vn30' ? filteredFund : filteredFund.slice(0, 30);
+            
+            const peSymbols = [...displayFund].sort((a,b) => a.pe - b.pe).map(item => item.symbol);
+            const peValues = [...displayFund].sort((a,b) => a.pe - b.pe).map(item => item.pe);
             
             const tracePE = {{
                 x: peSymbols,
@@ -934,8 +1061,8 @@ def main():
             layoutPE.margin.t = 10;
             Plotly.newPlot('pe-compare-chart', [tracePE], layoutPE);
 
-            const roeSymbols = [...fund].sort((a,b) => b.roe - a.roe).map(item => item.symbol);
-            const roeValues = [...fund].sort((a,b) => b.roe - a.roe).map(item => item.roe);
+            const roeSymbols = [...displayFund].sort((a,b) => b.roe - a.roe).map(item => item.symbol);
+            const roeValues = [...displayFund].sort((a,b) => b.roe - a.roe).map(item => item.roe);
             
             const traceROE = {{
                 x: roeSymbols,
@@ -951,7 +1078,7 @@ def main():
             const fundBody = document.getElementById('fundamentals-table-body');
             fundBody.innerHTML = '';
             
-            fund.forEach(item => {{
+            filteredFund.forEach(item => {{
                 const tr = document.createElement('tr');
                 let rating = '';
                 if (item.roe >= 20 && item.pe <= 15) {{

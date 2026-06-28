@@ -21,7 +21,7 @@ services:
     environment:
       # --- Airflow internal ---
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USER:-airflow}:${DB_PASS:-airflow}@db:5432/${DB_NAME:-stock_db}
-      _PIP_ADDITIONAL_REQUIREMENTS: vnstock requests pandas psycopg2-binary dbt-core==1.10.22 dbt-postgres==1.10.0 python-dotenv
+      _PIP_ADDITIONAL_REQUIREMENTS: vnstock requests pandas psycopg2-binary dbt-core==1.10.19 dbt-postgres==1.10.0 python-dotenv
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: admin
       _AIRFLOW_WWW_USER_PASSWORD: admin
@@ -32,14 +32,38 @@ services:
       DB_USER: ${DB_USER:-airflow}
       DB_PASS: ${DB_PASS:-airflow}
       PROVIDER: ${PROVIDER:-vnstock}
+      VNSTOCK_API_KEY: ${VNSTOCK_API_KEY}
+      VNSTOCK_INTERACTIVE: "0"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./:/opt/airflow/project
+      - ./simple_auth_manager_passwords.json:/opt/airflow/simple_auth_manager_passwords.json.generated
+      - ./vnstock_config:/home/airflow/.vnstock
     depends_on:
       - db
     networks:
       - stock-network
     command: standalone
+
+  dbt-docs:
+    container_name: dbt-docs-container
+    image: apache/airflow:3.2.2
+    ports:
+      - "8081:8081"
+    environment:
+      _PIP_ADDITIONAL_REQUIREMENTS: dbt-core==1.10.19 dbt-postgres==1.10.0
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-stock_db}
+      DB_USER: ${DB_USER:-airflow}
+      DB_PASS: ${DB_PASS:-airflow}
+    volumes:
+      - ./:/opt/airflow/project
+    depends_on:
+      - db
+    networks:
+      - stock-network
+    command: bash -c "cd /opt/airflow/project/dbt && dbt deps --profiles-dir . && dbt docs generate --profiles-dir . && dbt docs serve --port 8081 --host 0.0.0.0 --profiles-dir ."
 
 networks:
   stock-network:

@@ -152,22 +152,26 @@ def validate_dataframe(df: pd.DataFrame, context: str = "") -> pd.DataFrame:
     if missing:
         raise ValueError(f"{prefix}Missing required columns: {missing}")
 
-    # 2. Null primary keys
+    # 2. Null primary keys (Cảnh báo, để dbt xử lý)
     null_code = df["code"].isna().sum()
     null_date = df["date"].isna().sum()
     if null_code > 0 or null_date > 0:
-        raise ValueError(
-            f"{prefix}Null values in PK columns — code: {null_code}, date: {null_date}"
+        logger.warning(
+            f"{prefix}Found NULL values in PK columns (code: {null_code}, date: {null_date}). "
+            "Passing to Bronze. dbt_test_silver will catch this."
         )
 
-    # 3. Positive OHLCV
-    for col in ("open", "high", "low", "close", "volume"):
-        if col in df.columns:
-            non_positive = (df[col] <= 0).sum()
-            if non_positive > 0:
-                raise ValueError(
-                    f"{prefix}Column '{col}' has {non_positive} non-positive value(s)."
-                )
+    # 3. Positive OHLC and Non-negative Volume (Cảnh báo, để dbt xử lý)
+    for col in ("open", "high", "low", "close"):
+        if col in df.columns and (df[col] <= 0).any():
+            bad_count = (df[col] <= 0).sum()
+            logger.warning(f"{prefix}Column '{col}' has {bad_count} non-positive value(s). "
+                           "Passing to Bronze. dbt_run_silver will flag this.")
+
+    if "volume" in df.columns and (df["volume"] < 0).any():
+        bad_count = (df["volume"] < 0).sum()
+        logger.warning(f"{prefix}Column 'volume' has {bad_count} negative value(s). "
+                       "Passing to Bronze.")
 
     logger.debug("%sDataFrame validated OK — %d rows.", prefix, len(df))
     return df

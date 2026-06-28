@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: fact_stock_indicators
-    description: "OHLCV indicators: MA5/MA20/RSI14/MACD/Bollinger. Incremental daily."
+    description: "OHLCV indicators: MA50/MA200/RSI14/MACD/Bollinger. Full rebuild table."
     columns:
       - name: rsi_14
         description: "RSI14 Wilder. NULL trong 14 ngày đầu mỗi mã."
@@ -15,9 +15,9 @@ models:
 
       - dbt_utils.expression_is_true:
           arguments:
-            expression: "ma20 > 0"
+            expression: "ma200 > 0"
           config:
-            where: "ma20 IS NOT NULL"
+            where: "ma200 IS NOT NULL"
 
       - dbt_utils.expression_is_true:
           arguments:

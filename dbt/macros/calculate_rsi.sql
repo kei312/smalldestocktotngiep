@@ -40,9 +40,9 @@ SELECT
     symbol,
     trade_date,
     CASE
-        WHEN avg_loss  = 0 AND avg_gain  = 0 THEN NULL
-        WHEN avg_loss  = 0                    THEN 100.0
-        ELSE ROUND((100.0 - (100.0 / (1.0 + avg_gain / avg_loss)))::NUMERIC, 4)
+        WHEN avg_loss = 0 AND avg_gain = 0 THEN NULL
+        WHEN avg_loss = 0 THEN 100.0
+        ELSE ROUND((100.0 - (100.0 / (1.0 + avg_gain / NULLIF(avg_loss, 0))))::NUMERIC, 4)
     END AS rsi_{{ period }}
 FROM _rsi_rec
 

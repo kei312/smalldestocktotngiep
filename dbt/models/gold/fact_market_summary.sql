@@ -5,12 +5,13 @@
 WITH stock_stats AS (
     SELECT
         trade_date,
-        SUM(CASE WHEN close_price > open_price THEN 1 ELSE 0 END) AS gainers,
-        SUM(CASE WHEN close_price < open_price THEN 1 ELSE 0 END) AS losers,
-        SUM(CASE WHEN close_price = open_price THEN 1 ELSE 0 END) AS unchanged,
+        SUM(CASE WHEN gain > 0 THEN 1 ELSE 0 END) AS gainers,
+        SUM(CASE WHEN loss > 0 THEN 1 ELSE 0 END) AS losers,
+        SUM(CASE WHEN gain = 0 AND loss = 0 THEN 1 ELSE 0 END) AS unchanged,
         SUM(volume) AS total_volume,
         COUNT(symbol) AS total_symbols
     FROM {{ ref('fact_stock_price') }}
+    WHERE row_num > 1
     GROUP BY trade_date
 ),
 vnindex AS (

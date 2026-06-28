@@ -1,5 +1,9 @@
 {% macro calculate_ema(period, source_relation=none, value_column='close_price') %}
 
+{% if value_column == 'close_price' and source_relation != none %}
+    {{ exceptions.raise_compiler_error("Safeguard: value_column defaults to 'close_price' but source_relation is overridden. Did you forget to specify value_column?") }}
+{% endif %}
+
 {% if source_relation is none %}
     {% set source_relation = ref('fact_stock_price') %}
 {% endif %}
@@ -14,6 +18,7 @@ _ema_seed AS (
     FROM {{ source_relation }}
     WHERE row_num <= {{ period }}
     GROUP BY symbol
+    HAVING COUNT(*) = {{ period }}
 ),
 
 -- Recursive: each row = val * alpha + prev_ema * (1 - alpha)
