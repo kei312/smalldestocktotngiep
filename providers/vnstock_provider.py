@@ -37,7 +37,7 @@ _SOURCE_TAG = "vnstock"
 
 # Optimized global rate limit: 60 requests/minute is 1.0s. 
 # We use 1.05s per request for safety margin.
-_REQUEST_INTERVAL_SECONDS = 1.5
+_REQUEST_INTERVAL_SECONDS = 1.8
 
 # Supported stock sources for history quotes in vnstock 4.x
 _UNIQUE_SOURCES = ["kbs", "vci"]
@@ -73,8 +73,11 @@ class VnstockProvider(DataProvider):
     """Concrete provider backed by the vnstock 4.x library."""
 
     def __init__(self):
+        # vnstock 4.x enforces rate limits per API key globally, not per source.
+        # We must use a single global rate limiter to prevent concurrent 429 errors.
+        global_limiter = RateLimiter(_REQUEST_INTERVAL_SECONDS)
         self._rate_limiters = {
-            src: RateLimiter(_REQUEST_INTERVAL_SECONDS) for src in _UNIQUE_SOURCES
+            src: global_limiter for src in _UNIQUE_SOURCES
         }
         
         # Thread-safe global pause event for rate-limiting
@@ -269,16 +272,6 @@ class VnstockProvider(DataProvider):
                 self._trigger_pause(15.0)
                 last_error = ProviderRateLimitError(f"vnstock rate limit (sys.exit) for {symbol}")
             except Exception as e:
-                import requests
-                
-                # Unwrap tenacity.RetryError if present
-                actual_err = e
-                if type(e).__name__ == "RetryError":
-                    try:
-                        actual_err = e.last_attempt.exception()
-                    except Exception:
-                        pass
-                
                 import requests
                 
                 # Unwrap tenacity.RetryError if present
