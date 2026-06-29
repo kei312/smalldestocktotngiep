@@ -20,7 +20,7 @@ def run_verification():
            rsi_14, macd_line, macd_signal, macd_histogram,
            ma50, ma200, bb_upper, bb_lower
     FROM public_gold.fact_stock_indicators
-    WHERE symbol IN ('ADS', 'AGG', 'AAA')
+    WHERE symbol IN ('ADS', 'AGG', 'AAA', 'VCB', 'HPG', 'VNM')
     ORDER BY symbol, trade_date
     """
     
