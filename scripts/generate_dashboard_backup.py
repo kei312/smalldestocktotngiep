@@ -170,43 +170,7 @@ def main():
             'is_vn30': bool(df_sym['is_vn30'].iloc[0]) if not df_sym.empty else False
         }
 
-    # Generate Mock Fundamentals (Dashboard 4)
-    import random
-    random.seed(42) # Consistent mock data
-    
-    # Specific realistic values for some notable stocks
-    notable_fundamentals = {
-        'FPT': {'pe': 22.4, 'pb': 5.2, 'roe': 25.6},
-        'HPG': {'pe': 14.8, 'pb': 1.8, 'roe': 12.5},
-        'TCB': {'pe': 8.5, 'pb': 1.2, 'roe': 16.8},
-        'VCB': {'pe': 15.2, 'pb': 2.9, 'roe': 20.1},
-        'VNM': {'pe': 18.1, 'pb': 4.1, 'roe': 23.4},
-        'VIC': {'pe': 28.5, 'pb': 1.9, 'roe': 6.2},
-        'VHM': {'pe': 7.2, 'pb': 1.3, 'roe': 19.5},
-        'MSN': {'pe': 35.0, 'pb': 2.8, 'roe': 8.1},
-        'GAS': {'pe': 16.5, 'pb': 2.5, 'roe': 15.6},
-        'SSI': {'pe': 19.2, 'pb': 2.1, 'roe': 11.4}
-    }
-    
-    fundamentals_list = []
-    for sym in symbols:
-        if sym in notable_fundamentals:
-            f = notable_fundamentals[sym]
-        else:
-            pe = round(random.uniform(6.5, 26.0), 1)
-            pb = round(random.uniform(0.8, 3.5), 1)
-            roe = round(random.uniform(8.0, 22.0), 1)
-            f = {'pe': pe, 'pb': pb, 'roe': roe}
-        
-        fundamentals_list.append({
-            'symbol': sym,
-            'pe': f['pe'],
-            'pb': f['pb'],
-            'roe': f['roe']
-        })
-    
-    # Sort fundamentals by ROE descending for default view
-    fundamentals_list = sorted(fundamentals_list, key=lambda x: x['roe'], reverse=True)
+
 
     # 1.4 Top Movers parsing
     top_movers_list = []
@@ -265,8 +229,7 @@ def main():
         },
         'top_movers': top_movers_list,
         'symbols': symbols,
-        'indicators_by_symbol': indicators_by_symbol,
-        'fundamentals': fundamentals_list
+        'indicators_by_symbol': indicators_by_symbol
     }
 
     # HTML Template
@@ -411,9 +374,6 @@ def main():
                     </li>
                     <li class="nav-item me-2 mb-2">
                         <button class="nav-link" onclick="switchTab('market-trends')">Market Trends (DB 3)</button>
-                    </li>
-                    <li class="nav-item me-2 mb-2">
-                        <button class="nav-link" onclick="switchTab('fundamentals')">Fundamentals (DB 4)</button>
                     </li>
                 </ul>
             </div>
@@ -593,77 +553,7 @@ def main():
             </div>
         </div>
 
-        <!-- ==================== DASHBOARD 4: FUNDAMENTALS ==================== -->
-        <div id="fundamentals" class="dashboard-tab">
-            <!-- Fundamentals Overview KPIs -->
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="card kpi-card">
-                        <div class="kpi-value text-gainer" id="kpi-avg-pe">0.0</div>
-                        <div class="kpi-label" id="kpi-avg-pe-label">P/E Trung Bình</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card kpi-card">
-                        <div class="kpi-value text-info" id="kpi-avg-pb">0.0</div>
-                        <div class="kpi-label" id="kpi-avg-pb-label">P/B Trung Bình</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card kpi-card">
-                        <div class="kpi-value text-warning" id="kpi-avg-roe">0.0%</div>
-                        <div class="kpi-label" id="kpi-avg-roe-label">ROE Trung Bình</div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Charts: PE & ROE Comparison -->
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header" id="pe-compare-header">So Sánh Chỉ Số P/E</div>
-                        <div class="card-body">
-                            <div id="pe-compare-chart" style="height: 400px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header" id="roe-compare-header">So Sánh Tỷ Lệ ROE (%)</div>
-                        <div class="card-body">
-                            <div id="roe-compare-chart" style="height: 400px;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fundamentals Data Table -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">Bảng Thống Kê Chi Tiết Chỉ Số Cơ Bản (PE / PB / ROE)</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-custom table-dark table-hover align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>Mã Cổ Phiếu</th>
-                                            <th>P/E (Price to Earnings)</th>
-                                            <th>P/B (Price to Book Value)</th>
-                                            <th>ROE (Return on Equity - %)</th>
-                                            <th>Đánh Giá Sơ Bộ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="fundamentals-table-body">
-                                        <!-- Will be filled by JS -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
     </div>
 
@@ -732,7 +622,6 @@ def main():
             filterSymbols(group);
             renderMarketOverview();
             renderMarketTrends();
-            renderFundamentals();
         }}
 
         window.addEventListener('load', () => {{
@@ -1023,93 +912,7 @@ def main():
             Plotly.newPlot('market-volume-trend', [traceV], layoutVol);
         }}
 
-        function renderFundamentals() {{
-            const fund = DATA.fundamentals;
-            const group = window.currentGroup || 'all';
-            
-            let filteredFund = [];
-            if (group === 'vn30') {{
-                filteredFund = fund.filter(item => {{
-                    const sData = DATA.indicators_by_symbol[item.symbol];
-                    return sData && sData.is_vn30;
-                }});
-            }} else {{
-                filteredFund = fund;
-            }}
 
-            let avgPE = 0, avgPB = 0, avgROE = 0;
-            if (filteredFund.length > 0) {{
-                avgPE = filteredFund.reduce((sum, item) => sum + item.pe, 0) / filteredFund.length;
-                avgPB = filteredFund.reduce((sum, item) => sum + item.pb, 0) / filteredFund.length;
-                avgROE = filteredFund.reduce((sum, item) => sum + item.roe, 0) / filteredFund.length;
-            }}
-
-            document.getElementById('kpi-avg-pe').innerText = avgPE.toFixed(1);
-            document.getElementById('kpi-avg-pe-label').innerText = group === 'vn30' ? 'P/E Trung Bình VN30' : 'P/E Trung Bình (All)';
-            document.getElementById('kpi-avg-pb').innerText = avgPB.toFixed(1);
-            document.getElementById('kpi-avg-pb-label').innerText = group === 'vn30' ? 'P/B Trung Bình VN30' : 'P/B Trung Bình (All)';
-            document.getElementById('kpi-avg-roe').innerText = avgROE.toFixed(1) + "%";
-            document.getElementById('kpi-avg-roe-label').innerText = group === 'vn30' ? 'ROE Trung Bình VN30' : 'ROE Trung Bình (All)';
-
-            document.getElementById('pe-compare-header').innerText = group === 'vn30' ? 'So Sánh Chỉ Số P/E Rổ VN30' : 'So Sánh Chỉ Số P/E (Top 30)';
-            document.getElementById('roe-compare-header').innerText = group === 'vn30' ? 'So Sánh Tỷ Lệ ROE (%) Rổ VN30' : 'So Sánh Tỷ Lệ ROE (%) (Top 30)';
-
-            const displayFund = group === 'vn30' ? filteredFund : filteredFund.slice(0, 30);
-            
-            const peSymbols = [...displayFund].sort((a,b) => a.pe - b.pe).map(item => item.symbol);
-            const peValues = [...displayFund].sort((a,b) => a.pe - b.pe).map(item => item.pe);
-            
-            const tracePE = {{
-                x: peSymbols,
-                y: peValues,
-                type: 'bar',
-                name: 'PE',
-                marker: {{ color: '#38bdf8' }}
-            }};
-            const layoutPE = JSON.parse(JSON.stringify(chartLayoutDefaults));
-            layoutPE.margin.t = 10;
-            Plotly.newPlot('pe-compare-chart', [tracePE], layoutPE);
-
-            const roeSymbols = [...displayFund].sort((a,b) => b.roe - a.roe).map(item => item.symbol);
-            const roeValues = [...displayFund].sort((a,b) => b.roe - a.roe).map(item => item.roe);
-            
-            const traceROE = {{
-                x: roeSymbols,
-                y: roeValues,
-                type: 'bar',
-                name: 'ROE (%)',
-                marker: {{ color: '#22c55e' }}
-            }};
-            const layoutROE = JSON.parse(JSON.stringify(chartLayoutDefaults));
-            layoutROE.margin.t = 10;
-            Plotly.newPlot('roe-compare-chart', [traceROE], layoutROE);
-
-            const fundBody = document.getElementById('fundamentals-table-body');
-            fundBody.innerHTML = '';
-            
-            filteredFund.forEach(item => {{
-                const tr = document.createElement('tr');
-                let rating = '';
-                if (item.roe >= 20 && item.pe <= 15) {{
-                    rating = '<span class="badge bg-success">ROE CAO - ĐỊNH GIÁ RẺ</span>';
-                }} else if (item.roe >= 18) {{
-                    rating = '<span class="badge bg-info">HIỆU QUẢ CAO</span>';
-                }} else if (item.pe <= 9) {{
-                    rating = '<span class="badge bg-warning text-dark">PE THẤP</span>';
-                }} else {{
-                    rating = '<span class="badge bg-secondary">BÌNH THƯỜNG</span>';
-                }}
-                
-                tr.innerHTML = `
-                    <td class="fw-bold text-white">${{item.symbol}}</td>
-                    <td>${{item.pe.toFixed(1)}}</td>
-                    <td>${{item.pb.toFixed(1)}}</td>
-                    <td class="text-gainer">${{item.roe.toFixed(1)}}%</td>
-                    <td>${{rating}}</td>
-                `;
-                fundBody.appendChild(tr);
-            }});
-        }}
     </script>
 </body>
 </html>
