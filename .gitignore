@@ -47,3 +47,6 @@ scripts/deep_clean_*.py
 # Editor and testing cache
 .vscode/
 .pytest_cache/
+
+# Local archive folder
+unused_files/

@@ -6,7 +6,6 @@ from .base import (
     ProviderSchemaError,
 )
 from .vnstock_provider import VnstockProvider
-from .mock_provider import MockProvider
 from .registry import get_provider
 
 __all__ = [
@@ -16,6 +15,5 @@ __all__ = [
     "ProviderTimeoutError",
     "ProviderSchemaError",
     "VnstockProvider",
-    "MockProvider",
     "get_provider",
 ]

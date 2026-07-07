@@ -3,7 +3,6 @@ import os
 import logging
 from .base import DataProvider
 from .vnstock_provider import VnstockProvider
-from .mock_provider import MockProvider
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +24,15 @@ def get_provider() -> DataProvider:
 
     # Return existing instance if already created for the same provider type
     if _provider_instance is not None:
-        expected_type = VnstockProvider if provider_name == "vnstock" else MockProvider
-        if isinstance(_provider_instance, expected_type):
+        if isinstance(_provider_instance, VnstockProvider):
             return _provider_instance
 
     # First-time instantiation
-    if provider_name == "mock":
-        logger.info("Using MockProvider (new instance).")
-        _provider_instance = MockProvider()
-    elif provider_name == "vnstock":
+    if provider_name == "vnstock":
         logger.info("Using VnstockProvider (new instance).")
         _provider_instance = VnstockProvider()
     else:
-        logger.warning("Unknown provider '%s'. Falling back to MockProvider.", provider_name)
-        _provider_instance = MockProvider()
+        logger.warning("Provider '%s' is not supported. Defaulting to VnstockProvider.", provider_name)
+        _provider_instance = VnstockProvider()
 
     return _provider_instance

@@ -49,12 +49,35 @@ def test_validate_dataframe_null_pk(caplog):
     res = validate_dataframe(df)
     assert not res.empty
     assert "Found NULL values in PK columns" in caplog.text
+class DummyMockProvider:
+    def get_prices(self, symbols, start, end):
+        from datetime import timedelta
+        data = []
+        for sym in symbols:
+            curr = start
+            while curr <= end:
+                data.append({
+                    "code": sym,
+                    "date": curr,
+                    "open": 100.0,
+                    "high": 105.0,
+                    "low": 95.0,
+                    "close": 101.0,
+                    "volume": 1000,
+                    "source": "mock"
+                })
+                curr += timedelta(days=1)
+        return pd.DataFrame(data)
+
+    def get_index(self, indices, start, end):
+        return self.get_prices(indices, start, end)
+
+
 @patch("ingestion.fetch_prices.get_provider")
 @patch("ingestion.fetch_prices.save_bronze_prices")
 def test_run_prices_success(mock_save, mock_get_provider):
     # Set up the mock provider
-    from providers.mock_provider import MockProvider
-    mock_get_provider.return_value = MockProvider()
+    mock_get_provider.return_value = DummyMockProvider()
 
     # Run prices
     start = date(2024, 1, 2)
@@ -67,12 +90,12 @@ def test_run_prices_success(mock_save, mock_get_provider):
     assert len(saved_df) == rows
     assert "ingested_at" in saved_df.columns
 
+
 @patch("ingestion.fetch_prices.get_provider")
 @patch("ingestion.fetch_prices.save_bronze_prices")
 def test_backfill_logic(mock_save, mock_get_provider):
     """Xác minh FR-08: test_backfill_logic (Khôi phục dữ liệu lịch sử)"""
-    from providers.mock_provider import MockProvider
-    mock_get_provider.return_value = MockProvider()
+    mock_get_provider.return_value = DummyMockProvider()
 
     # Backfill with a wider range
     start = date(2023, 1, 1)
@@ -85,12 +108,12 @@ def test_backfill_logic(mock_save, mock_get_provider):
     assert len(saved_df) == rows
     assert "ingested_at" in saved_df.columns
 
+
 @patch("ingestion.fetch_index.get_provider")
 @patch("ingestion.fetch_index.save_bronze_prices")
 def test_run_index_success(mock_save, mock_get_provider):
     # Set up the mock provider
-    from providers.mock_provider import MockProvider
-    mock_get_provider.return_value = MockProvider()
+    mock_get_provider.return_value = DummyMockProvider()
 
     # Run index
     start = date(2024, 1, 2)
