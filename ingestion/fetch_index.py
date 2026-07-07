@@ -63,18 +63,21 @@ def run_index(
     # --- Fetch (with retry) ---
     df = _fetch_with_retry(provider, indices, start, end)
 
-    # --- Validate ---
-    df['ingested_at'] = pd.Timestamp.utcnow()
-    df = validate_dataframe(df, context=f"index {start}→{end}")
-
-    # --- Save ---
-    save_bronze_prices(df, table="bronze.bronze_index")
+    # --- Validate & Save ---
+    if df is not None and not df.empty:
+        df['ingested_at'] = pd.Timestamp.utcnow()
+        df = validate_dataframe(df, context=f"index {start}→{end}")
+        save_bronze_prices(df, table="bronze.bronze_index")
+        rows_saved = len(df)
+    else:
+        logger.warning("No index data returned from provider for indices=%s", indices)
+        rows_saved = 0
 
     elapsed = (datetime.utcnow() - t_start).total_seconds()
     logger.info(
-        "run_index: DONE — %d rows upserted in %.1fs", len(df), elapsed
+        "run_index: DONE — %d rows upserted in %.1fs", rows_saved, elapsed
     )
-    return len(df)
+    return rows_saved
 
 
 def _parse_args():
