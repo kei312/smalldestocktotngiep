@@ -122,10 +122,9 @@ Nếu muốn chạy trực tiếp các lệnh dbt để tạo lại bảng Silve
 docker exec airflow-container bash -c "cd /opt/airflow/project/dbt && dbt build --profiles-dir ."
 ```
 
-### 3. Kết nối Power BI
-Kết nối client Power BI Desktop của bạn trực tiếp vào Database:
-* **Host**: `localhost`
-* **Port**: `5432`
-* **Database**: `stock_db`
-* **Username/Password**: `airflow` / `airflow`
-* **Tables**: Kết nối trực tiếp vào các bảng tầng `gold` (như `dim_stock`, `fact_stock_indicators`).
+### 3. Mở Power BI Dashboard (Đã thiết kế sẵn)
+Dự án đã tích hợp sẵn Dashboard chuyên nghiệp tại: `reports/Daily_OHLCV_analysis.pbix`.
+Để sử dụng:
+1. Mở file `reports/Daily_OHLCV_analysis.pbix` bằng phần mềm **Power BI Desktop**.
+2. Trên thanh menu Home, bấm nút **Refresh** (Làm mới) để tự động đồng bộ và hiển thị dữ liệu mới nhất từ database PostgreSQL local của bạn.
+*(Nếu bạn thay đổi cổng hoặc thông tin kết nối DB trong `.env`, hãy vào **Transform data** -> **Data source settings** -> **Change Source** để cập nhật lại thông số).*
