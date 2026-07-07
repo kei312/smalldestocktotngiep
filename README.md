@@ -131,11 +131,15 @@ Dự án đã tích hợp sẵn Dashboard chuyên nghiệp tại: `reports/Daily
 
 ### 4. Mở Dashboard HTML Dự phòng (Plan B)
 Dự án tích hợp sẵn Dashboard HTML tương tác vẽ bằng Plotly.js để xem dữ liệu nhanh không cần cài Power BI:
-* **Cách mở nhanh trên Windows (từ WSL)**: Chạy lệnh sau trong terminal để tự động mở bằng trình duyệt mặc định:
+* **Cách mở nhanh trên Windows (từ WSL)**: Chạy lệnh sau trong terminal để tự động chuyển đổi đường dẫn và mở bằng trình duyệt mặc định (tránh lỗi đường dẫn UNC):
   ```bash
-  cmd.exe /c start reports/dashboard_backup.html
+  powershell.exe -c "Start-Process '$(wslpath -w reports/dashboard_backup.html)'"
   ```
-  Hoặc mở thư mục trên Windows Explorer bằng lệnh `explorer.exe reports` rồi click đúp vào file `dashboard_backup.html`.
+  Hoặc mở thư mục chứa file bằng Windows Explorer từ WSL:
+  ```bash
+  explorer.exe reports
+  ```
+  rồi click đúp vào file `dashboard_backup.html`.
 * **Cách cập nhật dữ liệu mới**: Chạy script Python sau để kéo dữ liệu mới nhất từ PostgreSQL vào file HTML:
   ```bash
   ./venv/bin/python scripts/generate_dashboard_backup.py
