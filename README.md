@@ -4,20 +4,84 @@ Một hệ thống tự động cào, xử lý dữ liệu thị trường chứ
 
 ---
 
-## 🏗️ Luồng dữ liệu (Data Flow)
+## 🏗️ Kiến trúc hệ thống & Luồng dữ liệu (Architecture & Data Flow)
 
 ```mermaid
-graph LR
-    API[Vnstock API] -->|Airflow Ingestion| Bronze[(Bronze Layer)]
-    Bronze -->|dbt Silver Clean| Silver[(Silver Layer)]
-    Silver -->|dbt Gold Transform| Gold[(Gold Layer)]
-    Gold -->|DirectQuery| PBI[Power BI]
+graph TD
+    %% Providers & Ingestion
+    subgraph Ingestion_Layer ["Ingestion Layer (Python)"]
+        subgraph Providers ["Provider Layer (Vnstock)"]
+            VCI["Nguồn VCI"]
+            KBSV["Nguồn KBSV"]
+        end
+        RL["Rate Limiter"]
+        TP["Thread Pool (5 workers)"]
+        FP["fetch_prices.py"]
+        
+        Providers --> RL
+        RL --> TP
+        TP --> FP
+    end
 
-    style API fill:#357a38,stroke:#fff,color:#fff
-    style Bronze fill:#a0522d,stroke:#fff,color:#fff
-    style Silver fill:#708090,stroke:#fff,color:#fff
-    style Gold fill:#ffd700,stroke:#fff,color:#333
-    style PBI fill:#f2c811,stroke:#fff,color:#333
+    %% Orchestrator
+    Airflow((Apache Airflow<br/>Orchestrator))
+
+    %% Bronze Layer
+    subgraph Bronze_Layer ["Bronze Layer (PostgreSQL)"]
+        B_Prices[("bronze_prices<br/>(JSONB, Partitioned)")]
+        B_Index[("bronze_index")]
+        B_VN30[("bronze_vn30_components")]
+    end
+
+    FP -->|UPSERT Idempotent| B_Prices
+
+    %% Silver Layer
+    subgraph Silver_Layer ["Silver Layer (dbt)"]
+        S_Prices["silver_prices<br/>(Kiểm định chất lượng:<br/>Clean, Cast, Flag is_valid)"]
+    end
+
+    B_Prices -->|Clean, Cast, Flag is_valid| S_Prices
+
+    %% Gold Layer
+    subgraph Gold_Layer ["Gold Layer (dbt - Star Schema)"]
+        F_Price["fact_stock_price"]
+        IM["Intermediate Models<br/>(EMA, RSI, MACD)"]
+        F_Indicators["fact_stock_indicators Table"]
+        D_Stock["dim_stock"]
+        D_Date["dim_date"]
+        
+        F_Price --> IM
+        IM --> F_Indicators
+    end
+
+    S_Prices -->|Lọc is_valid = TRUE| F_Price
+
+    %% Presentation
+    subgraph Presentation_Layer ["Presentation Layer"]
+        PBI["Power BI Dashboards<br/>(Import Mode)"]
+    end
+
+    F_Price --> PBI
+    F_Indicators --> PBI
+    D_Stock --> PBI
+    D_Date --> PBI
+
+    %% Airflow Orchestration Links (Dotted)
+    Airflow -.->|Điều phối| Ingestion_Layer
+    Airflow -.->|Điều phối| Silver_Layer
+    Airflow -.->|Điều phối| Gold_Layer
+
+    %% Styling
+    style Airflow fill:#f3e5f5,stroke:#ab47bc,stroke-width:2px,color:#4a148c
+    style B_Prices fill:#fff3e0,stroke:#ffb74d,stroke-width:1px
+    style B_Index fill:#fff3e0,stroke:#ffb74d,stroke-width:1px
+    style B_VN30 fill:#fff3e0,stroke:#ffb74d,stroke-width:1px
+    style S_Prices fill:#eceff1,stroke:#b0bec5,stroke-width:1px
+    style F_Price fill:#fffde7,stroke:#fff176,stroke-width:1px
+    style F_Indicators fill:#fffde7,stroke:#fff176,stroke-width:1px
+    style D_Stock fill:#fffde7,stroke:#fff176,stroke-width:1px
+    style D_Date fill:#fffde7,stroke:#fff176,stroke-width:1px
+    style PBI fill:#fffde7,stroke:#fbc02d,stroke-width:2px,color:#333
 ```
 
 * **Bronze Layer**: Lưu trữ dữ liệu thô (raw JSON) thu thập từ các nguồn (KBS, VCI...) thông qua thư viện Vnstock.
