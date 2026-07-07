@@ -37,7 +37,7 @@ _SOURCE_TAG = "vnstock"
 
 # Optimized global rate limit: 60 requests/minute is 1.0s. 
 # We use 1.05s per request for safety margin.
-_REQUEST_INTERVAL_SECONDS = 1.8
+_REQUEST_INTERVAL_SECONDS = 1.6
 
 # Supported stock sources for history quotes in vnstock 4.x
 _UNIQUE_SOURCES = ["kbs", "vci"]
