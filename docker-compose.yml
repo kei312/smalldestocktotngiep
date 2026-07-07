@@ -10,6 +10,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-stock_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./sql/init_schema.sql:/docker-entrypoint-initdb.d/init_schema.sql
     networks:
       - stock-network
 
