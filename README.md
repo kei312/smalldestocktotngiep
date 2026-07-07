@@ -90,7 +90,7 @@ graph TD
 
 ---
 
-## 🚀 Khởi chạy hệ thống (2 bước duy nhất)
+## 🚀 Khởi chạy hệ thống 
 
 Nhờ cấu hình Docker tự động hóa, bạn chỉ cần thực hiện 2 lệnh sau ở thư mục gốc:
 
@@ -122,20 +122,19 @@ Nếu muốn chạy trực tiếp các lệnh dbt để tạo lại bảng Silve
 docker exec airflow-container bash -c "cd /opt/airflow/project/dbt && dbt build --profiles-dir ."
 ```
 
-### 3. Mở Power BI Dashboard (Đã thiết kế sẵn)
+### 3. Mở Power BI Dashboard 
 Dự án đã tích hợp sẵn Dashboard chuyên nghiệp tại: `reports/Daily_OHLCV_analysis.pbix`.
 Để sử dụng:
 1. Mở file `reports/Daily_OHLCV_analysis.pbix` bằng phần mềm **Power BI Desktop**.
 2. Trên thanh menu Home, bấm nút **Refresh** (Làm mới) để tự động đồng bộ và hiển thị dữ liệu mới nhất từ database PostgreSQL local của bạn.
 *(Nếu bạn thay đổi cổng hoặc thông tin kết nối DB trong `.env`, hãy vào **Transform data** -> **Data source settings** -> **Change Source** để cập nhật lại thông số).*
 
-### 4. Mở Dashboard HTML Dự phòng (Plan B)
+### 4. Mở Dashboard HTML (Dự phòng)
 Dự án tích hợp sẵn Dashboard HTML tương tác vẽ bằng Plotly.js để xem dữ liệu nhanh không cần cài Power BI:
 * **Cách mở nhanh trên Windows (từ WSL)**: Chạy lệnh sau trong terminal để tự động mở bằng trình duyệt mặc định:
   ```bash
   cmd.exe /c start reports/dashboard_backup.html
   ```
-  Hoặc mở thư mục trên Windows Explorer bằng lệnh `explorer.exe reports` rồi click đúp vào file `dashboard_backup.html`.
 * **Cách cập nhật dữ liệu mới**: Chạy script Python sau để kéo dữ liệu mới nhất từ PostgreSQL vào file HTML:
   ```bash
   ./venv/bin/python scripts/generate_dashboard_backup.py
