@@ -125,9 +125,10 @@ with DAG(
             "{% if not params.run_vn30_only %}"
             f"{RUN_PREFIX} python -m ingestion.fetch_prices --mode others --start {{{{ d }}}} --end {{{{ d }}}}"
             "{% else %}"
-            'echo "[SKIP] fetch_prices_others: run_vn30_only=true"'
+            'echo "[SKIP] fetch_prices_others: run_vn30_only=true" && exit 99'
             "{% endif %}"
         ),
+        skip_on_exit_code=99,
         retries=3,
         retry_delay=timedelta(minutes=2),
         retry_exponential_backoff=True,
@@ -157,6 +158,7 @@ with DAG(
             "--profiles-dir . "
             "--project-dir ."
         ),
+        trigger_rule="none_failed_min_one_success",
         execution_timeout=timedelta(minutes=10),
     )
 
