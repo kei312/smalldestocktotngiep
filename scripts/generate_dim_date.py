@@ -6,6 +6,7 @@ date_range = pd.date_range(start='2020-01-01', end='2050-12-31')
 df = pd.DataFrame({'date': date_range})
 
 df['day_of_week'] = df['date'].dt.day_name()
+df['day'] = df['date'].dt.day
 df['month'] = df['date'].dt.month
 df['quarter'] = df['date'].dt.quarter
 df['year'] = df['date'].dt.year

@@ -14,6 +14,7 @@ for date in dates:
 
 df = pd.DataFrame({
     'date': dates.strftime('%Y-%m-%d'),
+    'day': dates.day,
     'day_of_week': dates.day_name(),
     'month': dates.month,
     'quarter': dates.quarter,
