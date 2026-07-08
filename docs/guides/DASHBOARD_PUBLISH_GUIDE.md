@@ -42,8 +42,8 @@ docker compose up -d
 3. Chọn mục **Pages** ở danh sách menu bên trái.
 4. Tại phần **Build and deployment**:
    - **Source**: Chọn `Deploy from a branch`.
-   - **Branch**: Chọn nhánh `main` (hoặc `master`).
-   - **Folder**: Chọn thư mục `/docs` thay vì `/` (root).
+   - **Branch**: Chọn nhánh **`gh-pages`** (Nhánh này sẽ tự động được tạo ra sau lần chạy đầu tiên của Airflow DAG).
+   - **Folder**: Chọn thư mục **`/ (root)`**.
    - Nhấn nút **Save**.
 5. Đợi 1-2 phút, GitHub sẽ xuất bản trang web của bạn tại địa chỉ:
    👉 **`https://kei312.github.io/smalldestocktotngiep/`**

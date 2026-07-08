@@ -56,3 +56,6 @@ unused_files/
 
 # IDE Configuration
 .antigravityignore
+
+# HTML Dashboard
+docs/index.html

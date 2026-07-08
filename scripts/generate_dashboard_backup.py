@@ -75,7 +75,7 @@ def main():
     vnindex_history_sql = """
         SELECT trade_date, vnindex_close, vn30_close, total_volume, gainers, losers, unchanged
         FROM public_gold.fact_market_summary
-        WHERE trade_date >= (SELECT MAX(trade_date) FROM public_gold.fact_market_summary) - INTERVAL '400 days'
+        WHERE trade_date >= (SELECT MAX(trade_date) FROM public_gold.fact_market_summary) - INTERVAL '200 days'
         ORDER BY trade_date ASC;
     """
     df_market_history = query_to_dataframe(conn, vnindex_history_sql)
@@ -88,12 +88,12 @@ def main():
     df_market_history['vn30_close'] = df_market_history['vn30_close'].apply(normalize_index)
 
     # 1.3 Top Movers (with percent change calculated on normalized prices)
-    # We fetch 400 days of VN30 for historical breadth, and 2 latest days for all stocks to calculate top movers.
+    # We fetch 200 days of VN30 for historical breadth, and 2 latest days for all stocks to calculate top movers.
     all_prices_sql = """
         SELECT p.symbol, p.trade_date, p.close_price, p.volume, COALESCE(s.is_vn30, FALSE) as is_vn30
         FROM public_gold.fact_stock_price p
         LEFT JOIN public_gold.dim_stock s ON p.symbol = s.symbol
-        WHERE (s.is_vn30 = TRUE AND p.trade_date >= (SELECT MAX(trade_date) FROM public_gold.fact_stock_price) - INTERVAL '400 days')
+        WHERE (s.is_vn30 = TRUE AND p.trade_date >= (SELECT MAX(trade_date) FROM public_gold.fact_stock_price) - INTERVAL '200 days')
            OR (p.trade_date IN (
                SELECT DISTINCT trade_date 
                FROM public_gold.fact_stock_price 
@@ -119,7 +119,7 @@ def main():
     df_top_movers = df_latest_prices.sort_values(by='pct_change', ascending=False)
 
     print("Fetching data for Dashboard 2 (Stock Analysis)...")
-    # 2.1 Indicators data for all symbols (filtered to last 400 days to optimize size)
+    # 2.1 Indicators data for all symbols (filtered to last 200 days to optimize size)
     indicators_sql = """
         SELECT 
             ind.symbol, 
@@ -136,7 +136,7 @@ def main():
             COALESCE(s.is_vn30, FALSE) as is_vn30
         FROM public_gold.fact_stock_indicators ind
         LEFT JOIN public_gold.dim_stock s ON ind.symbol = s.symbol
-        WHERE ind.trade_date >= (SELECT MAX(trade_date) FROM public_gold.fact_stock_indicators) - INTERVAL '400 days'
+        WHERE ind.trade_date >= (SELECT MAX(trade_date) FROM public_gold.fact_stock_indicators) - INTERVAL '200 days'
         ORDER BY ind.symbol, ind.trade_date ASC;
     """
     df_indicators = query_to_dataframe(conn, indicators_sql)

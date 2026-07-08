@@ -139,7 +139,7 @@ docker compose up -d
   * *Mở từ Linux (GUI)*: `xdg-open docs/index.html` | *macOS*: `open docs/index.html`
 * **Đường dẫn online**: `https://<your_username>.github.io/<your_repo>/` (Publish qua GitHub Pages).
   * Tự động cập nhật: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu và push thẳng lên GitHub.
-  * Hướng dẫn thiết lập chi tiết: Xem tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
+  * Hướng dẫn thiết lập chi tiết: Xem tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/guides/DASHBOARD_PUBLISH_GUIDE.md).
   * Cập nhật thủ công local:
     ```bash
     docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
