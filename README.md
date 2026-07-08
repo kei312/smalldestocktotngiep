@@ -130,34 +130,16 @@ Dự án đã tích hợp sẵn Dashboard chuyên nghiệp tại: `reports/Daily
 *(Nếu bạn thay đổi cổng hoặc thông tin kết nối DB trong `.env`, hãy vào **Transform data** -> **Data source settings** -> **Change Source** để cập nhật lại thông số).*
 
 ### 4. Mở Dashboard HTML & Tự động Publish (GitHub Pages)
-Hệ thống tích hợp một Dashboard HTML tương tác vẽ bằng Plotly.js giúp xem dữ liệu nhanh qua trình duyệt và tự động publish lên internet miễn phí bằng **GitHub Pages**.
+Dự án tích hợp một Dashboard HTML tương tác vẽ bằng Plotly.js giúp xem dữ liệu nhanh qua trình duyệt và tự động publish lên internet miễn phí bằng **GitHub Pages**.
 
-* **Đường dẫn file static**: `docs/index.html` (được sinh tự động).
-* **Tự động cập nhật & Publish (Khuyên dùng)**: 
-  DAG `publish_dashboard_pipeline` được lên lịch chạy tự động lúc **18h20** (từ thứ 2 đến thứ 6). DAG này sẽ:
-  1. Chạy script để cập nhật dữ liệu mới nhất từ PostgreSQL Gold layer vào file `docs/index.html`.
-  2. Tự động commit và push file này lên GitHub repository của bạn để cập nhật nội dung web.
-  
-  **Cách cấu hình tính năng Tự động Publish**:
-  1. Tạo **GitHub Personal Access Token (PAT)** có quyền `repo` (Xem hướng dẫn trên GitHub).
-  2. Cấu hình vào file `.env` của bạn:
-     ```env
-     GITHUB_PAT=ghp_yourpersonalaccesstokenhere
-     GITHUB_REPO=github.com/username/your_repo_name.git
-     ```
-  3. Bật **GitHub Pages** trên Repository của bạn:
-     * Vào **Settings** -> **Pages**.
-     * Tại **Build and deployment**, chọn source là `Deploy from a branch`.
-     * Chọn nhánh `main` (hoặc `master`) và chọn thư mục `/docs` (thay vì `/` root) -> Bấm **Save**.
-     * Trang web của bạn sẽ online tại địa chỉ: `https://<username>.github.io/<repo_name>/`
+* **Đường dẫn local**: [docs/index.html](file:///home/naeouad/deproject/docs/index.html)
+* **Đường dẫn online**: `https://<your_username>.github.io/<your_repo>/` (Publish qua GitHub Pages)
+* **Tự động cập nhật**: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu mới và tự động commit/push lên GitHub.
+* **Hướng dẫn cấu hình**: Xem chi tiết các bước thiết lập Token và GitHub Pages tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
 
 * **Cập nhật dữ liệu thủ công**:
-  Nếu muốn cập nhật file HTML tại local mà không cần đợi DAG chạy:
   ```bash
   docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
   ```
-  Hoặc chạy từ venv của host:
-  ```bash
-  ./venv/bin/python scripts/generate_dashboard_backup.py
-  ```
+
 

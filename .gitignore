@@ -36,6 +36,9 @@ simple_auth_manager_passwords.json
 **/*.md
 *.md
 !README.md
+!docs/**/*.md
+!docs/*.md
+
 
 # Ignore temporary AI patch scripts, update reports, checklist tasks
 patch_report*.py
