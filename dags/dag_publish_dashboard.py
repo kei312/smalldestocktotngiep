@@ -44,7 +44,7 @@ with DAG(
             f"git config --global user.name 'Airflow Bot' && "
             f"git config --global user.email 'airflow-bot@example.com' && "
             f"git add docs/index.html && "
-            f"(git diff-index --quiet HEAD || git commit -m 'auto-update: dashboard data $(date +\"%Y-%m-%d %H:%M:%S\")') && "
+            f"(git diff --cached --quiet docs/index.html || git commit -m 'auto-update: dashboard data $(date +\"%Y-%m-%d %H:%M:%S\")' docs/index.html) && "
             f"git push https://${{GITHUB_PAT}}@${{GITHUB_REPO}} main"
         ),
         env={
