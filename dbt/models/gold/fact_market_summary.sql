@@ -35,5 +35,5 @@ SELECT
     vi.vnindex_close,
     v30.vn30_close
 FROM stock_stats s
-LEFT JOIN vnindex vi ON s.trade_date = vi.trade_date
-LEFT JOIN vn30 v30 ON s.trade_date = v30.trade_date
+INNER JOIN vnindex vi ON s.trade_date = vi.trade_date
+INNER JOIN vn30 v30 ON s.trade_date = v30.trade_date
