@@ -127,14 +127,20 @@ docker compose up -d
   ```
 
 ### B. Trực quan hóa & Phân tích số liệu (Dashboards)
-
-Hệ thống cung cấp hai phương án trực quan hóa dữ liệu trực tuyến (online) phục vụ báo cáo và phân tích kỹ thuật:
-
-| Dashboard | Trạng thái / Link Online | Mô tả vai trò | Hướng dẫn sử dụng |
-| :--- | :--- | :--- | :--- |
-| **Power BI Web Report** | [![Power BI](https://img.shields.io/badge/Power_BI-F2C811?style=for-the-badge&logo=powerbi&logoColor=black)](https://app.powerbi.com/view?r=your_actual_powerbi_share_link) | **Báo cáo phân tích chuyên sâu (Primary)**: Kết nối database Gold, chứa các phân tích đa chiều nâng cao, biểu đồ phân tích kỹ thuật tổng hợp, và tính năng time-intelligence. | Click vào badge để xem trực tuyến trên trình duyệt (hoặc tải file offline `.pbix` trong thư mục `reports/`). |
-| **HTML Dashboard** | [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)](https://kei312.github.io/smalldestocktotngiep/) | **Trang web truy cập nhanh & Dự phòng (Web/Offline Backup)**: Chạy serverless trên GitHub Pages, tự động cập nhật lúc 18h20, nhẹ nhàng, xem được trên mọi thiết bị và hoạt động offline không cần mạng. | Click vào badge để xem trực tuyến.<br>Để mở file local từ terminal:<br>• **WSL**: `powershell.exe -c "Start-Process '$(wslpath -w docs/index.html)'"`<br>• **Linux**: `xdg-open docs/index.html`<br>• **macOS**: `open docs/index.html` |
-
-> [!TIP]
-> - **Cấu hình tự động publish HTML**: Xem hướng dẫn tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
-> - **Cập nhật dữ liệu thủ công local cho HTML**: Chạy lệnh: `docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py`
+* **Power BI Dashboard (Báo cáo chính)**:
+  * File báo cáo: [Daily_OHLCV_analysis.pbix](file:///home/naeouad/deproject/reports/Daily_OHLCV_analysis.pbix).
+  * Sử dụng: Mở bằng **Power BI Desktop**, nhấn nút **Refresh** trên thanh menu để đồng bộ và cập nhật dữ liệu mới nhất từ PostgreSQL database cục bộ.
+* **Đường dẫn local**: [docs/index.html](file:///home/naeouad/deproject/docs/index.html)
+  * *Mở nhanh từ WSL (Windows)*: 
+    ```bash
+    powershell.exe -c "Start-Process '$(wslpath -w docs/index.html)'"
+    ```
+    Hoặc gõ `explorer.exe docs` để mở thư mục rồi click đúp.
+  * *Mở từ Linux (GUI)*: `xdg-open docs/index.html` | *macOS*: `open docs/index.html`
+* **Đường dẫn online**: `https://<your_username>.github.io/<your_repo>/` (Publish qua GitHub Pages).
+  * Tự động cập nhật: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu và push thẳng lên GitHub.
+  * Hướng dẫn thiết lập chi tiết: Xem tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
+  * Cập nhật thủ công local:
+    ```bash
+    docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
+    ```
