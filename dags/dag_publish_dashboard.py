@@ -41,8 +41,8 @@ with DAG(
         bash_command=(
             f"cd {PROJECT_DIR} && "
             f"git config --global --add safe.directory {PROJECT_DIR} && "
-            f"git config user.name 'Airflow Bot' && "
-            f"git config user.email 'airflow-bot@example.com' && "
+            f"git config --global user.name 'Airflow Bot' && "
+            f"git config --global user.email 'airflow-bot@example.com' && "
             f"git add docs/index.html && "
             f"(git diff-index --quiet HEAD || git commit -m 'auto-update: dashboard data $(date +\"%Y-%m-%d %H:%M:%S\")') && "
             f"git push https://${{GITHUB_PAT}}@${{GITHUB_REPO}} main"
