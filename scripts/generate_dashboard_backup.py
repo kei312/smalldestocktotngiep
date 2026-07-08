@@ -917,15 +917,17 @@ def main():
 </body>
 </html>
 """
-    # Write to file
-    output_dir = "reports"
+    # Write to file (using absolute path relative to script directory)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    output_dir = os.path.join(project_root, "docs")
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "dashboard_backup.html")
+    output_path = os.path.join(output_dir, "index.html")
     
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
         
-    print(f"Success! Dashboard backup generated at: {output_path}")
+    print(f"Success! Dashboard generated at: {output_path}")
 
 if __name__ == "__main__":
     main()

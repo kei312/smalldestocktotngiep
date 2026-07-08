@@ -129,18 +129,35 @@ Dự án đã tích hợp sẵn Dashboard chuyên nghiệp tại: `reports/Daily
 2. Trên thanh menu Home, bấm nút **Refresh** (Làm mới) để tự động đồng bộ và hiển thị dữ liệu mới nhất từ database PostgreSQL local của bạn.
 *(Nếu bạn thay đổi cổng hoặc thông tin kết nối DB trong `.env`, hãy vào **Transform data** -> **Data source settings** -> **Change Source** để cập nhật lại thông số).*
 
-### 4. Mở Dashboard HTML (Dự phòng)
-Dự án tích hợp sẵn Dashboard HTML tương tác vẽ bằng Plotly.js để xem dữ liệu nhanh không cần cài Power BI:
-* **Cách mở nhanh trên Windows (từ WSL)**: Chạy lệnh sau trong terminal để tự động chuyển đổi đường dẫn và mở bằng trình duyệt mặc định (tránh lỗi đường dẫn UNC):
+### 4. Mở Dashboard HTML & Tự động Publish (GitHub Pages)
+Hệ thống tích hợp một Dashboard HTML tương tác vẽ bằng Plotly.js giúp xem dữ liệu nhanh qua trình duyệt và tự động publish lên internet miễn phí bằng **GitHub Pages**.
+
+* **Đường dẫn file static**: `docs/index.html` (được sinh tự động).
+* **Tự động cập nhật & Publish (Khuyên dùng)**: 
+  DAG `publish_dashboard_pipeline` được lên lịch chạy tự động lúc **18h20** (từ thứ 2 đến thứ 6). DAG này sẽ:
+  1. Chạy script để cập nhật dữ liệu mới nhất từ PostgreSQL Gold layer vào file `docs/index.html`.
+  2. Tự động commit và push file này lên GitHub repository của bạn để cập nhật nội dung web.
+  
+  **Cách cấu hình tính năng Tự động Publish**:
+  1. Tạo **GitHub Personal Access Token (PAT)** có quyền `repo` (Xem hướng dẫn trên GitHub).
+  2. Cấu hình vào file `.env` của bạn:
+     ```env
+     GITHUB_PAT=ghp_yourpersonalaccesstokenhere
+     GITHUB_REPO=github.com/username/your_repo_name.git
+     ```
+  3. Bật **GitHub Pages** trên Repository của bạn:
+     * Vào **Settings** -> **Pages**.
+     * Tại **Build and deployment**, chọn source là `Deploy from a branch`.
+     * Chọn nhánh `main` (hoặc `master`) và chọn thư mục `/docs` (thay vì `/` root) -> Bấm **Save**.
+     * Trang web của bạn sẽ online tại địa chỉ: `https://<username>.github.io/<repo_name>/`
+
+* **Cập nhật dữ liệu thủ công**:
+  Nếu muốn cập nhật file HTML tại local mà không cần đợi DAG chạy:
   ```bash
-  powershell.exe -c "Start-Process '$(wslpath -w reports/dashboard_backup.html)'"
+  docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
   ```
-  Hoặc mở thư mục chứa file bằng Windows Explorer từ WSL:
-  ```bash
-  explorer.exe reports
-  ```
-  rồi click đúp vào file `dashboard_backup.html`.
-* **Cách cập nhật dữ liệu mới**: Chạy script Python sau để kéo dữ liệu mới nhất từ PostgreSQL vào file HTML:
+  Hoặc chạy từ venv của host:
   ```bash
   ./venv/bin/python scripts/generate_dashboard_backup.py
   ```
+
