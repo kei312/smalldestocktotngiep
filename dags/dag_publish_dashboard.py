@@ -35,17 +35,21 @@ with DAG(
         bash_command=f"{RUN_PREFIX} python scripts/generate_dashboard_backup.py",
     )
 
-    # 2. Thực hiện git commit và git push sử dụng PAT
+    # 2. Thực hiện git commit và git push sử dụng PAT lên nhánh gh-pages qua thư mục tạm
     git_push_github = BashOperator(
         task_id="git_push_github",
         bash_command=(
-            f"cd {PROJECT_DIR} && "
-            f"git config --global --add safe.directory {PROJECT_DIR} && "
+            f"tmp_dir=$(mktemp -d) && "
+            f"cp {PROJECT_DIR}/docs/index.html ${{tmp_dir}}/index.html && "
+            f"cd ${{tmp_dir}} && "
+            f"git init && "
             f"git config --global user.name 'Airflow Bot' && "
             f"git config --global user.email 'airflow-bot@example.com' && "
-            f"git add docs/index.html && "
-            f"(git diff --cached --quiet docs/index.html || git commit -m 'auto-update: dashboard data $(date +\"%Y-%m-%d %H:%M:%S\")' docs/index.html) && "
-            f"git push https://${{GITHUB_PAT}}@${{GITHUB_REPO}} main"
+            f"git checkout -b gh-pages && "
+            f"git add index.html && "
+            f"git commit -m 'auto-update: dashboard data $(date +\"%Y-%m-%d %H:%M:%S\")' && "
+            f"git push --force https://${{GITHUB_PAT}}@${{GITHUB_REPO}} gh-pages && "
+            f"rm -rf ${{tmp_dir}}"
         ),
         env={
             "GITHUB_PAT": os.getenv("GITHUB_PAT", ""),
