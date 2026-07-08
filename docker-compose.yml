@@ -35,6 +35,8 @@ services:
       PROVIDER: ${PROVIDER:-vnstock}
       VNSTOCK_API_KEY: ${VNSTOCK_API_KEY}
       VNSTOCK_INTERACTIVE: "0"
+      GITHUB_PAT: ${GITHUB_PAT}
+      GITHUB_REPO: ${GITHUB_REPO}
     volumes:
       - ./dags:/opt/airflow/dags
       - ./:/opt/airflow/project
