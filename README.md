@@ -130,8 +130,14 @@ docker compose up -d
 * **Power BI Dashboard (Báo cáo chính)**:
   * File báo cáo: [Daily_OHLCV_analysis.pbix](file:///home/naeouad/deproject/reports/Daily_OHLCV_analysis.pbix).
   * Sử dụng: Mở bằng **Power BI Desktop**, nhấn nút **Refresh** trên thanh menu để đồng bộ và cập nhật dữ liệu mới nhất từ PostgreSQL database cục bộ.
-* **HTML Dashboard (Tự động Publish lên GitHub Pages)**:
-  * Trang web trực tuyến: `https://<your_username>.github.io/<your_repo>/` (Publish hoàn toàn miễn phí).
+* **Đường dẫn local**: [docs/index.html](file:///home/naeouad/deproject/docs/index.html)
+  * *Mở nhanh từ WSL (Windows)*: 
+    ```bash
+    powershell.exe -c "Start-Process '$(wslpath -w docs/index.html)'"
+    ```
+    Hoặc gõ `explorer.exe docs` để mở thư mục rồi click đúp.
+  * *Mở từ Linux (GUI)*: `xdg-open docs/index.html` | *macOS*: `open docs/index.html`
+* **Đường dẫn online**: `https://<your_username>.github.io/<your_repo>/` (Publish qua GitHub Pages).
   * Tự động cập nhật: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu và push thẳng lên GitHub.
   * Hướng dẫn thiết lập chi tiết: Xem tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
   * Cập nhật thủ công local:
