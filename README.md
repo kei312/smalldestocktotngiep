@@ -128,7 +128,7 @@ docker compose up -d
 
 ### B. Trực quan hóa & Phân tích số liệu (Dashboards)
 * **Power BI Dashboard (Báo cáo chính)**:
-  * File báo cáo: [Daily_OHLCV_analysis.pbix](file:///home/naeouad/deproject/reports/Daily_OHLCV_analysis.pbix).
+  * File báo cáo: **[Tải file Daily_OHLCV_analysis.pbix trực tiếp tại đây (GitHub Release)](https://github.com/kei312/smalldestocktotngiep/releases/download/v1.0/Daily_OHLCV_analysis.pbix)** hoặc xem file trong [thư mục local](file:///home/naeouad/deproject/reports/Daily_OHLCV_analysis.pbix) (đã được bỏ qua bởi Git).
   * Sử dụng: Mở bằng **Power BI Desktop**, nhấn nút **Refresh** trên thanh menu để đồng bộ và cập nhật dữ liệu mới nhất từ PostgreSQL database cục bộ.
 * **Đường dẫn local**: [docs/index.html](file:///home/naeouad/deproject/docs/index.html)
   * *Mở nhanh từ WSL (Windows)*: 
