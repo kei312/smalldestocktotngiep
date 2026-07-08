@@ -1,10 +1,10 @@
 # Vietnam Stock Market Data Engineering Pipeline
 
-Một hệ thống tự động cào, xử lý dữ liệu thị trường chứng khoán Việt Nam hàng ngày theo kiến trúc **Medallion (Bronze -> Silver -> Gold)**, được điều phối bởi **Apache Airflow** và biến đổi bằng **dbt**, kết nối trực tiếp đến **Power BI**.
+Một hệ thống tự động thu thập, xử lý và trực quan hóa dữ liệu thị trường chứng khoán Việt Nam hàng ngày theo kiến trúc **Medallion (Bronze -> Silver -> Gold)**, được điều phối bởi **Apache Airflow**, biến đổi dữ liệu bằng **dbt (PostgreSQL)**, và kết nối báo cáo qua **Power BI** & **HTML Dashboard**.
 
 ---
 
-## 🏗️ Kiến trúc hệ thống & Luồng dữ liệu (Architecture & Data Flow)
+## 🏗️ 1. Giới thiệu & Kiến trúc hệ thống (Architecture)
 
 ```mermaid
 graph TD
@@ -59,12 +59,16 @@ graph TD
     %% Presentation
     subgraph Presentation_Layer ["Presentation Layer"]
         PBI["Power BI Dashboards<br/>(Import Mode)"]
+        HTML_Dash["HTML Dashboard<br/>(GitHub Pages)"]
     end
 
     F_Price --> PBI
     F_Indicators --> PBI
     D_Stock --> PBI
     D_Date --> PBI
+    
+    F_Price --> HTML_Dash
+    F_Indicators --> HTML_Dash
 
     %% Airflow Orchestration Links (Dotted)
     Airflow -.->|Điều phối| Ingestion_Layer
@@ -82,6 +86,7 @@ graph TD
     style D_Stock fill:#fffde7,stroke:#fff176,stroke-width:1px
     style D_Date fill:#fffde7,stroke:#fff176,stroke-width:1px
     style PBI fill:#fffde7,stroke:#fbc02d,stroke-width:2px,color:#333
+    style HTML_Dash fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1
 ```
 
 * **Bronze Layer**: Lưu trữ dữ liệu thô (raw JSON) thu thập từ các nguồn (KBS, VCI...) thông qua thư viện Vnstock.
@@ -90,56 +95,46 @@ graph TD
 
 ---
 
-## 🚀 Khởi chạy hệ thống 
+## 🚀 2. Hướng dẫn khởi chạy nhanh (Quick Start)
 
-Nhờ cấu hình Docker tự động hóa, bạn chỉ cần thực hiện 2 lệnh sau ở thư mục gốc:
+Nhờ cấu hình Docker tự động hóa, bạn chỉ cần thực hiện 2 bước đơn giản sau tại thư mục gốc của dự án:
 
-### Bước 1: Tạo cấu hình môi trường
+### Bước 1: Thiết lập tệp cấu hình môi trường
 ```bash
 cp .env.example .env
 ```
-*(Mở file `.env` ra và điền khóa `VNSTOCK_API_KEY` của bạn).*
+*(Mở file `.env` vừa tạo ra và điền khóa `VNSTOCK_API_KEY` của bạn).*
 
-### Bước 2: Khởi chạy Docker Compose
+### Bước 2: Khởi chạy hạ tầng container
 ```bash
 docker compose up -d
 ```
 > [!NOTE]
-> Lệnh này sẽ tự động dựng toàn bộ hạ tầng, khởi tạo cấu trúc cơ sở dữ liệu Postgres (Bronze schema) và tải sẵn các thư viện dbt cần thiết.
+> Lệnh này dựng toàn bộ hạ tầng (Postgres, Airflow, dbt) và tự động khởi tạo cấu trúc cơ sở dữ liệu, phân vùng bảng, và tải sẵn các package dbt cần thiết.
 
 ---
 
-## ⚙️ Quản lý & Chạy thủ công
+## ⚙️ 3. Quản lý vận hành & Dashboard Báo cáo
 
-### 1. Airflow Web UI (Điều phối daily)
-* Truy cập địa chỉ: `http://localhost:8080`
-* Tài khoản mặc định: **admin** / **admin**
-* Bật/Trigger DAG `daily_stock_pipeline` để bắt đầu chạy pipeline cào và xử lý dữ liệu.
-
-### 2. Chạy dbt thủ công (Biến đổi dữ liệu)
-Nếu muốn chạy trực tiếp các lệnh dbt để tạo lại bảng Silver/Gold hoặc chạy test:
-```bash
-docker exec airflow-container bash -c "cd /opt/airflow/project/dbt && dbt build --profiles-dir ."
-```
-
-### 3. Mở Power BI Dashboard 
-Dự án đã tích hợp sẵn Dashboard chuyên nghiệp tại: `reports/Daily_OHLCV_analysis.pbix`.
-Để sử dụng:
-1. Mở file `reports/Daily_OHLCV_analysis.pbix` bằng phần mềm **Power BI Desktop**.
-2. Trên thanh menu Home, bấm nút **Refresh** (Làm mới) để tự động đồng bộ và hiển thị dữ liệu mới nhất từ database PostgreSQL local của bạn.
-*(Nếu bạn thay đổi cổng hoặc thông tin kết nối DB trong `.env`, hãy vào **Transform data** -> **Data source settings** -> **Change Source** để cập nhật lại thông số).*
-
-### 4. Mở Dashboard HTML & Tự động Publish (GitHub Pages)
-Dự án tích hợp một Dashboard HTML tương tác vẽ bằng Plotly.js giúp xem dữ liệu nhanh qua trình duyệt và tự động publish lên internet miễn phí bằng **GitHub Pages**.
-
-* **Đường dẫn local**: [docs/index.html](file:///home/naeouad/deproject/docs/index.html)
-* **Đường dẫn online**: `https://<your_username>.github.io/<your_repo>/` (Publish qua GitHub Pages)
-* **Tự động cập nhật**: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu mới và tự động commit/push lên GitHub.
-* **Hướng dẫn cấu hình**: Xem chi tiết các bước thiết lập Token và GitHub Pages tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
-
-* **Cập nhật dữ liệu thủ công**:
+### A. Vận hành & Giám sát Data Pipeline (Operations)
+* **Airflow Web UI (Điều phối daily)**:
+  * Địa chỉ: `http://localhost:8080` (Tài khoản mặc định: `admin` / `admin`).
+  * Sử dụng: Bật/Trigger DAG `daily_stock_pipeline` để bắt đầu cào và xử lý dữ liệu tự động.
+* **Biến đổi dữ liệu thủ công (dbt CLI)**:
+  Nếu muốn chạy trực tiếp dbt để test hoặc tạo lại bảng Silver/Gold:
   ```bash
-  docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
+  docker exec airflow-container bash -c "cd /opt/airflow/project/dbt && dbt build --profiles-dir ."
   ```
 
-
+### B. Trực quan hóa & Phân tích số liệu (Dashboards)
+* **Power BI Dashboard (Báo cáo chính)**:
+  * File báo cáo: [Daily_OHLCV_analysis.pbix](file:///home/naeouad/deproject/reports/Daily_OHLCV_analysis.pbix).
+  * Sử dụng: Mở bằng **Power BI Desktop**, nhấn nút **Refresh** trên thanh menu để đồng bộ và cập nhật dữ liệu mới nhất từ PostgreSQL database cục bộ.
+* **HTML Dashboard (Tự động Publish lên GitHub Pages)**:
+  * Trang web trực tuyến: `https://<your_username>.github.io/<your_repo>/` (Publish hoàn toàn miễn phí).
+  * Tự động cập nhật: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu và push thẳng lên GitHub.
+  * Hướng dẫn thiết lập chi tiết: Xem tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/DASHBOARD_PUBLISH_GUIDE.md).
+  * Cập nhật thủ công local:
+    ```bash
+    docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
+    ```
