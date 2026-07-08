@@ -238,53 +238,53 @@ def main():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vietnam Stock Analytics - Backup Dashboard</title>
+    <title>Vietnam Stock Analytics</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
     <style>
         body {{
-            background-color: #0f172a;
-            color: #f8fafc;
-            font-family: 'Outfit', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            font-family: 'Inter', sans-serif;
             padding-bottom: 50px;
         }}
         .header {{
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            border-bottom: 1px solid #334155;
-            padding: 20px 0;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 18px 0;
             margin-bottom: 30px;
         }}
         .card {{
-            background-color: #1e293b;
-            border: 1px solid #334155;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
             margin-bottom: 20px;
         }}
         .card-header {{
-            background-color: #1e293b;
-            border-bottom: 1px solid #334155;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             font-weight: 600;
             font-size: 1.1rem;
-            color: #38bdf8;
+            color: #2563eb;
         }}
         .nav-pills .nav-link {{
-            color: #94a3b8;
+            color: #64748b;
             font-weight: 500;
             border-radius: 8px;
             transition: all 0.2s ease;
         }}
         .nav-pills .nav-link.active {{
-            background-color: #0284c7;
+            background-color: #2563eb;
             color: #ffffff;
         }}
         .nav-pills .nav-link:hover:not(.active) {{
-            background-color: #334155;
-            color: #f1f5f9;
+            background-color: #f1f5f9;
+            color: #0f172a;
         }}
         .kpi-card {{
             text-align: center;
@@ -293,28 +293,28 @@ def main():
         .kpi-value {{
             font-size: 1.8rem;
             font-weight: 700;
-            color: #ffffff;
+            color: #0f172a;
         }}
         .kpi-label {{
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-top: 5px;
         }}
         .table-custom {{
-            color: #f8fafc;
+            color: #0f172a;
         }}
         .table-custom th {{
-            border-bottom: 2px solid #475569;
-            color: #38bdf8;
+            border-bottom: 2px solid #e2e8f0;
+            color: #2563eb;
             font-weight: 600;
         }}
         .table-custom td {{
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #f1f5f9;
         }}
         .text-gainer {{
-            color: #22c55e;
+            color: #10b981;
             font-weight: 600;
         }}
         .text-loser {{
@@ -322,19 +322,19 @@ def main():
             font-weight: 600;
         }}
         .text-unchanged {{
-            color: #e2e8f0;
+            color: #64748b;
             font-weight: 600;
         }}
         .form-select {{
-            background-color: #0f172a;
-            border-color: #475569;
-            color: #f8fafc;
+            background-color: #ffffff;
+            border-color: #cbd5e1;
+            color: #0f172a;
         }}
         .form-select:focus {{
-            background-color: #0f172a;
-            color: #f8fafc;
-            border-color: #0284c7;
-            box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.25);
+            background-color: #ffffff;
+            color: #0f172a;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
         }}
         .dashboard-tab {{
             display: none;
@@ -350,12 +350,11 @@ def main():
         <div class="container">
             <div class="d-flex flex-wrap justify-content-between align-items-center">
                 <div>
-                    <h1 class="h3 mb-1 text-white fw-bold">Vietnam Stock Analysis</h1>
+                    <h1 class="h3 mb-1 text-dark fw-bold">Vietnam Stock Analysis</h1>
                     <p class="mb-0 text-muted">Hệ thống phân tích kỹ thuật và thị trường chuyên nghiệp</p>
                 </div>
                 <div class="text-end">
-                    <span class="badge bg-danger px-3 py-2 fs-6">DỰ PHÒNG (PLAN B)</span>
-                    <div class="text-muted mt-1 small">Phiên giao dịch gần nhất: <span id="latest-update-time"></span></div>
+                    <div class="text-muted mt-1 small fw-medium">Phiên giao dịch gần nhất: <span id="latest-update-time"></span></div>
                 </div>
             </div>
         </div>
@@ -378,14 +377,14 @@ def main():
                 </ul>
             </div>
             <div class="col-md-4 col-12 text-md-end text-center">
-                <div class="d-inline-flex align-items-center bg-dark p-1 rounded border border-secondary">
-                    <span class="text-info fw-bold me-2 ms-2 small">BỘ LỌC TOÀN CỤC:</span>
+                <div class="d-inline-flex align-items-center bg-white p-1 rounded border border-light shadow-sm">
+                    <span class="text-primary fw-bold me-2 ms-2 small">BỘ LỌC TOÀN CỤC:</span>
                     <div class="btn-group" role="group" aria-label="Global Group Filter">
                         <input type="radio" class="btn-check" name="global-group-filter" id="global-filter-all" autocomplete="off" checked onchange="onGlobalGroupChange('all')">
-                        <label class="btn btn-sm btn-outline-info" for="global-filter-all">Tất cả</label>
+                        <label class="btn btn-sm btn-outline-primary" for="global-filter-all">Tất cả</label>
 
                         <input type="radio" class="btn-check" name="global-group-filter" id="global-filter-vn30" autocomplete="off" onchange="onGlobalGroupChange('vn30')">
-                        <label class="btn btn-sm btn-outline-info" for="global-filter-vn30">Chỉ VN30</label>
+                        <label class="btn btn-sm btn-outline-primary" for="global-filter-vn30">Chỉ VN30</label>
                     </div>
                 </div>
             </div>
@@ -397,7 +396,7 @@ def main():
             <div class="row">
                 <div class="col-md-3 col-sm-6">
                     <div class="card kpi-card">
-                        <div class="kpi-value text-info" id="kpi-vnindex">0.00</div>
+                        <div class="kpi-value text-primary" id="kpi-vnindex">0.00</div>
                         <div class="kpi-label" id="kpi-vnindex-label">VN-Index</div>
                     </div>
                 </div>
@@ -448,7 +447,7 @@ def main():
                         <div class="card-header">Top 10 Cổ Phiếu Biến Động Mạnh Nhất (Top Movers)</div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-custom table-dark table-hover align-middle">
+                                <table class="table table-custom table-hover align-middle">
                                     <thead>
                                         <tr>
                                             <th>Mã Cổ Phiếu</th>
@@ -474,35 +473,23 @@ def main():
             <!-- Symbol Selector -->
             <div class="row align-items-center mb-4">
                 <div class="col-md-4">
-                    <label for="symbol-select" class="form-label fw-bold text-info">Chọn mã cổ phiếu:</label>
+                    <label for="symbol-select" class="form-label fw-bold text-primary">Chọn mã cổ phiếu:</label>
                     <select class="form-select fs-5" id="symbol-select" onchange="onSymbolChange(this.value)">
                         <!-- Will be filled by JS -->
                     </select>
                 </div>
                 <div class="col-md-8 text-md-end mt-3 mt-md-0">
-                    <h3 class="mb-0 text-white" id="current-analyzing-title">FPT - Phân Tích Kỹ Thuật</h3>
+                    <h3 class="mb-0 text-dark fw-bold" id="current-analyzing-title">FPT - Phân Tích Kỹ Thuật</h3>
                 </div>
             </div>
 
-            <!-- Price & Moving Averages -->
+            <!-- Price & Moving Averages (With Bollinger Bands integrated) -->
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">Biểu Đồ Giá Close & Trung Bình Động (MA50 / MA200) - Đơn vị: x1000 VND</div>
+                        <div class="card-header">Biểu Đồ Giá Close, MA (50/200) & Bollinger Bands - Đơn vị: x1000 VND</div>
                         <div class="card-body">
-                            <div id="price-ma-chart" style="height: 400px;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bollinger Bands -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">Bollinger Bands (BB) - Đơn vị: x1000 VND</div>
-                        <div class="card-body">
-                            <div id="bollinger-chart" style="height: 350px;"></div>
+                            <div id="price-ma-chart" style="height: 450px;"></div>
                         </div>
                     </div>
                 </div>
@@ -566,16 +553,16 @@ def main():
         const chartLayoutDefaults = {{
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
-            font: {{ color: '#94a3b8', family: 'Outfit, sans-serif' }},
+            font: {{ color: '#475569', family: 'Inter, sans-serif' }},
             xaxis: {{
-                gridcolor: '#334155',
-                linecolor: '#475569',
-                zerolinecolor: '#334155'
+                gridcolor: '#f1f5f9',
+                linecolor: '#cbd5e1',
+                zerolinecolor: '#e2e8f0'
             }},
             yaxis: {{
-                gridcolor: '#334155',
-                linecolor: '#475569',
-                zerolinecolor: '#334155'
+                gridcolor: '#f1f5f9',
+                linecolor: '#cbd5e1',
+                zerolinecolor: '#e2e8f0'
             }},
             margin: {{ t: 30, r: 20, b: 40, l: 55 }},
             legend: {{ orientation: 'h', y: 1.1, x: 0 }}
@@ -643,13 +630,10 @@ def main():
             Plotly.Plots.resize('vnindex-chart');
             Plotly.Plots.resize('market-breadth-pie');
             Plotly.Plots.resize('price-ma-chart');
-            Plotly.Plots.resize('bollinger-chart');
             Plotly.Plots.resize('rsi-chart');
             Plotly.Plots.resize('macd-chart');
             Plotly.Plots.resize('gainers-losers-trend');
             Plotly.Plots.resize('market-volume-trend');
-            Plotly.Plots.resize('pe-compare-chart');
-            Plotly.Plots.resize('roe-compare-chart');
         }}
 
         function renderMarketOverview() {{
@@ -681,7 +665,7 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'VN-Index',
-                line: {{ color: '#0ea5e9', width: 2.5 }}
+                line: {{ color: '#2563eb', width: 2.5 }}
             }};
             const traceVn30 = {{
                 x: DATA.market_history.trade_date,
@@ -689,7 +673,7 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'VN30-Index',
-                line: {{ color: '#f59e0b', width: 1.5, dash: 'dot' }}
+                line: {{ color: '#d97706', width: 1.5, dash: 'dot' }}
             }};
             
             const layoutVnIndex = JSON.parse(JSON.stringify(chartLayoutDefaults));
@@ -702,7 +686,7 @@ def main():
                 values: [gainersCount, losersCount, unchangedCount],
                 type: 'pie',
                 marker: {{
-                    colors: ['#22c55e', '#ef4444', '#64748b']
+                    colors: ['#10b981', '#ef4444', '#94a3b8']
                 }},
                 textinfo: 'value+percent',
                 textposition: 'inside',
@@ -725,10 +709,10 @@ def main():
                 const tr = document.createElement('tr');
                 const sign = item.pct_change > 0 ? '+' : '';
                 const colorClass = item.pct_change > 0 ? 'text-gainer' : (item.pct_change < 0 ? 'text-loser' : 'text-unchanged');
-                const statusBadge = item.pct_change > 0 ? '<span class="badge bg-success">TĂNG</span>' : (item.pct_change < 0 ? '<span class="badge bg-danger">GIẢM</span>' : '<span class="badge bg-secondary">ĐỨNG GIÁ</span>');
+                const statusBadge = item.pct_change > 0 ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">TĂNG</span>' : (item.pct_change < 0 ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">GIẢM</span>' : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">ĐỨNG GIÁ</span>');
                 
                 tr.innerHTML = `
-                    <td class="fw-bold text-white">${{item.symbol}}</td>
+                    <td class="fw-bold text-slate">${{item.symbol}}</td>
                     <td>${{item.close_price.toFixed(2)}}</td>
                     <td>${{item.prev_close ? item.prev_close.toFixed(2) : '-'}}</td>
                     <td class="${{colorClass}}">${{sign}}${{item.pct_change}}%</td>
@@ -743,13 +727,34 @@ def main():
             const sData = DATA.indicators_by_symbol[symbol];
             if (!sData) return;
 
+            // Bollinger Bands area traces (needs to be drawn first to be in the background)
+            const traceBBLower = {{
+                x: sData.trade_date,
+                y: sData.bb_lower,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'BB Lower',
+                line: {{ color: 'rgba(99, 102, 241, 0.25)', width: 1, dash: 'dash' }},
+                showlegend: false
+            }};
+            const traceBBUpper = {{
+                x: sData.trade_date,
+                y: sData.bb_upper,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Bollinger Bands',
+                line: {{ color: 'rgba(99, 102, 241, 0.25)', width: 1, dash: 'dash' }},
+                fill: 'tonexty',
+                fillcolor: 'rgba(99, 102, 241, 0.04)'
+            }};
+
             const traceClose = {{
                 x: sData.trade_date,
                 y: sData.close_price,
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Giá Close',
-                line: {{ color: '#f8fafc', width: 2 }}
+                line: {{ color: '#0f172a', width: 2 }}
             }};
             const traceMA50 = {{
                 x: sData.trade_date,
@@ -757,7 +762,7 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'MA50',
-                line: {{ color: '#eab308', width: 1.5 }}
+                line: {{ color: '#ea580c', width: 1.5 }}
             }};
             const traceMA200 = {{
                 x: sData.trade_date,
@@ -765,39 +770,14 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'MA200',
-                line: {{ color: '#3b82f6', width: 1.5 }}
+                line: {{ color: '#4f46e5', width: 1.5 }}
             }};
+
             const layoutPriceMA = JSON.parse(JSON.stringify(chartLayoutDefaults));
             layoutPriceMA.margin.t = 10;
-            Plotly.newPlot('price-ma-chart', [traceClose, traceMA50, traceMA200], layoutPriceMA);
-
-            const traceBBClose = {{
-                x: sData.trade_date,
-                y: sData.close_price,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Close',
-                line: {{ color: '#ffffff', width: 1.5 }}
-            }};
-            const traceBBUpper = {{
-                x: sData.trade_date,
-                y: sData.bb_upper,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'BB Upper',
-                line: {{ color: '#a855f7', width: 1, dash: 'dash' }}
-            }};
-            const traceBBLower = {{
-                x: sData.trade_date,
-                y: sData.bb_lower,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'BB Lower',
-                line: {{ color: '#a855f7', width: 1, dash: 'dash' }}
-            }};
-            const layoutBB = JSON.parse(JSON.stringify(chartLayoutDefaults));
-            layoutBB.margin.t = 10;
-            Plotly.newPlot('bollinger-chart', [traceBBClose, traceBBUpper, traceBBLower], layoutBB);
+            
+            // Plot combined Price, MA and Bollinger Bands on the main chart
+            Plotly.newPlot('price-ma-chart', [traceBBLower, traceBBUpper, traceClose, traceMA50, traceMA200], layoutPriceMA);
 
             const traceRsi = {{
                 x: sData.trade_date,
@@ -805,7 +785,7 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'RSI14',
-                line: {{ color: '#ec4899', width: 1.8 }}
+                line: {{ color: '#db2777', width: 1.8 }}
             }};
             const layoutRSI = JSON.parse(JSON.stringify(chartLayoutDefaults));
             layoutRSI.margin.t = 10;
@@ -828,7 +808,7 @@ def main():
                     yref: 'y',
                     y0: 30,
                     y1: 30,
-                    line: {{ color: '#22c55e', width: 1, dash: 'dash' }}
+                    line: {{ color: '#10b981', width: 1, dash: 'dash' }}
                 }}
             ];
             layoutRSI.yaxis.range = [10, 90];
@@ -840,7 +820,7 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'MACD Line',
-                line: {{ color: '#0ea5e9', width: 1.5 }}
+                line: {{ color: '#2563eb', width: 1.5 }}
             }};
             const traceMacdSignal = {{
                 x: sData.trade_date,
@@ -848,7 +828,7 @@ def main():
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Signal Line',
-                line: {{ color: '#f43f5e', width: 1.5 }}
+                line: {{ color: '#ea580c', width: 1.5 }}
             }};
             const traceMacdHist = {{
                 x: sData.trade_date,
@@ -856,7 +836,7 @@ def main():
                 type: 'bar',
                 name: 'Histogram',
                 marker: {{
-                    color: sData.macd_histogram.map(v => v >= 0 ? '#22c55e' : '#ef4444')
+                    color: sData.macd_histogram.map(v => v >= 0 ? '#10b981' : '#ef4444')
                 }}
             }};
             const layoutMACD = JSON.parse(JSON.stringify(chartLayoutDefaults));
