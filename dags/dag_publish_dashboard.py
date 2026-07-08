@@ -50,6 +50,7 @@ with DAG(
         env={
             "GITHUB_PAT": os.getenv("GITHUB_PAT", ""),
             "GITHUB_REPO": os.getenv("GITHUB_REPO", ""),
+            "HOME": "/home/airflow",
         }
     )
 
