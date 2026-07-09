@@ -46,6 +46,7 @@ update_report*.py
 scripts/update_*.py
 scripts/deep_clean_*.py
 .agents/
+airflow/
 
 # Editor and testing cache
 .vscode/
