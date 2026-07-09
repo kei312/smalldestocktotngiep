@@ -25,9 +25,8 @@ dbt/logs/
 # Temporary check directory
 xcheck/
 
-# vnstock config and cache (keep directory structure but ignore contents)
-vnstock_config/*
-!vnstock_config/.gitkeep
+# vnstock config and cache
+vnstock_config/
 
 # Airflow local auth passwords
 simple_auth_manager_passwords.json
@@ -55,6 +54,7 @@ airflow/
 # Local archive folder
 unused_files/
 .archive/
+docs/archive/
 
 # IDE Configuration
 .antigravityignore
