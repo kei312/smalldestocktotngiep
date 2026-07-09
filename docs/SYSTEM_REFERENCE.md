@@ -293,7 +293,7 @@ Same schema as `bronze_prices`. Stores VNINDEX, VN30 index data.
 | default_exchange | TEXT | Always 'HOSE' |
 | is_vn30 | BOOLEAN | From bronze_vn30_components |
 
-**Note:** `dim_date` seed (CSV) chưa được load vào DB. dim_date chỉ tồn tại dưới dạng `seeds/dim_date.csv`.
+**Note:** `dim_date` được nạp từ seed file (`seeds/dim_date.csv`) thông qua lệnh `dbt seed`.
 
 ---
 

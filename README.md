@@ -127,20 +127,47 @@ docker compose up -d
   ```
 
 ### B. Trực quan hóa & Phân tích số liệu (Dashboards)
-* **Power BI Dashboard (Báo cáo chính)**:
-  * File báo cáo: **[Tải file Daily_OHLCV_analysis.pbix trực tiếp tại đây (GitHub Release)](https://github.com/kei312/smalldestocktotngiep/releases/download/v1.0/Daily_OHLCV_analysis.pbix)**.
-  * Sử dụng: Mở bằng **Power BI Desktop**, nhấn nút **Refresh** trên thanh menu để đồng bộ và cập nhật dữ liệu mới nhất từ PostgreSQL database cục bộ.
-* **Đường dẫn local**: [docs/index.html](file:///home/naeouad/deproject/docs/index.html)
-  * *Mở nhanh từ WSL (Windows)*: 
+
+#### 1) Power BI Dashboard (báo cáo chính)
+- File báo cáo: **Daily_OHLCV_analysis.pbix**  
+  Link tải: https://github.com/kei312/smalldestocktotngiep/releases/download/v1.0/Daily_OHLCV_analysis.pbix
+- Cách dùng:
+  1. Mở file bằng **Power BI Desktop**.
+  2. Bấm **Refresh** để lấy dữ liệu mới nhất từ PostgreSQL local.
+- Lưu ý:
+  - Cần đảm bảo stack local đang chạy (`docker compose up -d`).
+  - Nếu chưa có dữ liệu mới trong DB, hãy trigger DAG `daily_stock_pipeline` trước.
+
+#### 2) HTML Dashboard (xem nhanh trên trình duyệt)
+- File local: `docs/index.html`
+- Mở nhanh:
+  - **WSL (Windows)**:
     ```bash
     powershell.exe -c "Start-Process '$(wslpath -w docs/index.html)'"
     ```
-    Hoặc gõ `explorer.exe docs` để mở thư mục rồi click đúp.
-  * *Mở từ Linux (GUI)*: `xdg-open docs/index.html` | *macOS*: `open docs/index.html`
-* **Đường dẫn online**: `https://<your_username>.github.io/<your_repo>/` (Publish qua GitHub Pages).
-  * Tự động cập nhật: DAG `publish_dashboard_pipeline` chạy tự động lúc **18h20** (Thứ 2 - Thứ 6) để cập nhật dữ liệu và push thẳng lên GitHub.
-  * Hướng dẫn thiết lập chi tiết: Xem tại [DASHBOARD_PUBLISH_GUIDE.md](file:///home/naeouad/deproject/docs/guides/DASHBOARD_PUBLISH_GUIDE.md).
-  * Cập nhật thủ công local:
+    Hoặc:
     ```bash
-    docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
+    explorer.exe docs
     ```
+  - **Linux (GUI)**:
+    ```bash
+    xdg-open docs/index.html
+    ```
+  - **macOS**:
+    ```bash
+    open docs/index.html
+    ```
+
+#### 3) Dashboard online qua GitHub Pages
+- URL public:
+  `https://<your_username>.github.io/<your_repo>/`
+- Tự động cập nhật:
+  - DAG `publish_dashboard_pipeline` chạy lúc **18:20, Thứ 2–Thứ 6**.
+  - Pipeline sẽ cập nhật dữ liệu và publish lại dashboard lên GitHub Pages.
+- Tài liệu cấu hình:
+  - `docs/guides/DASHBOARD_PUBLISH_GUIDE.md`
+
+#### 4) Cập nhật dashboard thủ công (khi cần)
+```bash
+docker exec -it airflow-container python /opt/airflow/project/scripts/generate_dashboard_backup.py
+```

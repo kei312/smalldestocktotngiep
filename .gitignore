@@ -53,6 +53,7 @@ scripts/deep_clean_*.py
 
 # Local archive folder
 unused_files/
+.archive/
 
 # IDE Configuration
 .antigravityignore
